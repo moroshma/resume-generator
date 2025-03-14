@@ -6,23 +6,21 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type Config struct {
-	UserService struct {
-		Database struct {
-			User     string `yaml:"user" env:"DB_USER"`
-			Password string `yaml:"password" env:"DB_PASSWORD"`
-			Name     string `yaml:"name" env:"DB_NAME"`
-		} `yaml:"database"`
+type UserService struct {
+	Database struct {
+		User     string `yaml:"user" env:"DB_USER"`
+		Password string `yaml:"password" env:"DB_PASSWORD"`
+		Name     string `yaml:"name" env:"DB_NAME"`
+	} `yaml:"database"`
 
-		HTTP struct {
-			Host string `yaml:"host" env:"HTTP_HOST"`
-			Port string `yaml:"port" env:"HTTP_PORT"`
-		} `yaml:"http"`
-	} `yaml:"user_service"`
+	HTTP struct {
+		Host string `yaml:"host" env:"HTTP_HOST"`
+		Port string `yaml:"port" env:"HTTP_PORT"`
+	} `yaml:"http"`
 }
 
-func LoadConfig(filepath string) (*Config, error) {
-	var cfg Config
+func LoadConfig(filepath string) (*UserService, error) {
+	var cfg UserService
 	if err := cleanenv.ReadConfig(filepath, &cfg); err != nil {
 		log.Fatalf("Error reading config file: %v", err)
 		return nil, err

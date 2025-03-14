@@ -51,13 +51,13 @@ func Run() {
 		log.Fatalf("Unable to ping connection pool: %v\n", err)
 	}
 
-	tokenUsecase := token_usecase.NewTokenUsecase()
-	userUsecase := user_usecase.NewUserUsecase(user_repository.NewPsqlUserRepository(dbpool))
-	roleUsecase := role_usecase.NewRoleUsecase(role_repository.NewPsqlRoleRepository(dbpool))
+	tokenUseCase := token_usecase.NewTokenUsecase()
+	userUseCase := user_usecase.NewUserUsecase(user_repository.NewPsqlUserRepository(dbpool))
+	roleUseCase := role_usecase.NewRoleUsecase(role_repository.NewPsqlRoleRepository(dbpool))
 
-	auth_handlers.NewAuthHandlers(r, userUsecase, tokenUsecase, roleUsecase)
-	role_handlers.NewRoleHandlers(r, roleUsecase)
-	user_handlers.NewUserHandlers(r, userUsecase)
+	auth_handlers.NewAuthHandlers(r, userUseCase, tokenUseCase, roleUseCase)
+	role_handlers.NewRoleHandlers(r, roleUseCase)
+	user_handlers.NewUserHandlers(r, userUseCase)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/user_service/swagger/doc.json"),

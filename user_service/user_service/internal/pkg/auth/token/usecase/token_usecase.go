@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
@@ -28,13 +27,12 @@ func (uc *tokenUsecase) GenerateRefreshTokenByUserID(id uint) (string, error) {
 	return tokenString, err
 }
 
-func (uc *tokenUsecase) GenerateAccessTokenByUserIDRoles(id uint, roles json.RawMessage) (string, error) {
+func (uc *tokenUsecase) GenerateAccessTokenByUserIDRoles(id uint) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, models.ClaimsWithRoles{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.Itoa(int(id)),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(8760 * time.Hour)),
 		},
-		Roles: roles,
 	})
 
 	tokenString, err := token.SignedString(SECRET)

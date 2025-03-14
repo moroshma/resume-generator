@@ -11,7 +11,7 @@ import (
 )
 
 type userHandlers struct {
-	userUsecase models.UserUsecaseI
+	userUseCase models.UserUsecaseI
 }
 
 func NewUserHandlers(r *chi.Mux, userUsecase models.UserUsecaseI) {
@@ -49,7 +49,7 @@ func (handlers *userHandlers) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handlers.userUsecase.Get(uint(id))
+	user, err := handlers.userUseCase.Get(uint(id))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -75,7 +75,7 @@ func (handlers *userHandlers) get(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {string} string "Not Found"
 // @Router /users [get]
 func (handlers *userHandlers) getAll(w http.ResponseWriter, r *http.Request) {
-	users, err := handlers.userUsecase.GetAll()
+	users, err := handlers.userUseCase.GetAll()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -113,7 +113,7 @@ func (handlers *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handlers.userUsecase.Update(uint(id), user)
+	err = handlers.userUseCase.Update(uint(id), user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -142,7 +142,7 @@ func (handlers *userHandlers) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handlers.userUsecase.Delete(uint(id))
+	err = handlers.userUseCase.Delete(uint(id))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

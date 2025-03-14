@@ -18,10 +18,6 @@ func NewPsqlUserRepository(db *pgxpool.Pool) models.UserRepositoryI {
 }
 
 func (pgRepo *psqlUserRepository) Create(user models.User) (uint, error) {
-	roleIDs := make([]uint, len(user.Roles))
-	for i, role := range user.Roles {
-		roleIDs[i] = role.ID
-	}
 
 	var insertedID uint
 	err := pgRepo.db.QueryRow(context.Background(), "SELECT insert_user_with_roles($1, $2, $3)",
@@ -42,10 +38,6 @@ func (pgRepo *psqlUserRepository) GetAll() (json.RawMessage, error) {
 }
 
 func (pgRepo *psqlUserRepository) Update(user models.User) error {
-	roleIDs := make([]uint, len(user.Roles))
-	for i, role := range user.Roles {
-		roleIDs[i] = role.ID
-	}
 
 	var rowsAffected uint
 	err := pgRepo.db.QueryRow(context.Background(), "SELECT update_user_with_roles($1, $2, $3, $4)", user.ID, user.Login,

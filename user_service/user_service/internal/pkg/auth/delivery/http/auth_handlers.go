@@ -13,20 +13,19 @@ import (
 type authHandlers struct {
 	userUsecase  models.UserUsecaseI
 	tokenUsecase models.TokenUsecaseI
-	roleUsecase  models.RoleUsecaseI
 }
 
 func NewAuthHandlers(r *chi.Mux,
 	userUsecase models.UserUsecaseI,
-	tokenUsecase models.TokenUsecaseI,
-	roleUsecase models.RoleUsecaseI) {
-	handlers := authHandlers{userUsecase, tokenUsecase, roleUsecase}
+	tokenUsecase models.TokenUsecaseI) {
+	handlers := authHandlers{userUsecase, tokenUsecase}
 
 	r.Get("/token", handlers.generateAccessTokenByRefreshToken)
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", handlers.register)
 		r.Post("/login", handlers.logIn)
 		r.With(middleware.AuthMiddleware("user", "admin")).Delete("/logout", handlers.logOut)
+		r.With(middleware.AuthMiddleware("user", "admin")).Get("/check", handlers.authCheck)
 	})
 }
 
@@ -47,7 +46,6 @@ func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.Roles = []models.Role{{ID: 2, Name: "user"}}
 	generatedID, err := handlers.userUsecase.Create(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -96,13 +94,12 @@ func (handlers *authHandlers) logIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	roles, err := handlers.roleUsecase.GetRolesByUserID(authUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(authUser.ID, roles)
+	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(authUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -164,13 +161,7 @@ func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseW
 		return
 	}
 
-	roles, err := handlers.roleUsecase.GetRolesByUserID(userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(userID, roles)
+	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -184,4 +175,9 @@ func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseW
 	})
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (handlers *authHandlers) authCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
 }

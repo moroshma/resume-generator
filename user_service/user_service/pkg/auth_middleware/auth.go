@@ -59,7 +59,7 @@ func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
 	return "", errors.New("Unexpected error")
 }
 
-func AuthMiddleware(roles ...string) gin.HandlerFunc {
+func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		refreshToken, err := c.Cookie("Refresh-Token")
 		if err != nil {
@@ -117,17 +117,7 @@ func AuthMiddleware(roles ...string) gin.HandlerFunc {
 			return
 		}
 
-		for _, role := range roles {
-			for _, claimRole := range claimsRoles {
-				if role == claimRole {
-					c.Next()
-					return
-				}
-			}
-		}
-
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		c.Abort()
+		c.Next()
 	}
 }
 

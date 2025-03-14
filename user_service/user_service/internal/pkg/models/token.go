@@ -8,7 +8,7 @@ import (
 
 type TokenUsecaseI interface {
 	GenerateRefreshTokenByUserID(uint) (string, error)
-	GenerateAccessTokenByUserIDRoles(uint, json.RawMessage) (string, error)
+	GenerateAccessTokenByUserIDRoles(uint) (string, error)
 	GetUserIDByRefreshToken(string) (uint, error)
 }
 
