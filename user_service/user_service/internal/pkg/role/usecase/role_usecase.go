@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/moroshma/resume-generator/user_service/user_service/internal/pkg/models"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 )
 
 type roleUsecase struct {

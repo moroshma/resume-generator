@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/moroshma/resume-generator/user_service/user_service/internal/app/middleware"
-	"github.com/moroshma/resume-generator/user_service/user_service/internal/pkg/models"
+	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 )
 
 type roleHandlers struct {

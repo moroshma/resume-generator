@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/moroshma/resume-generator/user_service/user_service/internal/pkg/models"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 )
 
 type tokenUsecase struct{}

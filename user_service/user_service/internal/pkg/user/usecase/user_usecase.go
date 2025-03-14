@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/mail"
 
-	"github.com/moroshma/resume-generator/user_service/user_service/internal/pkg/models"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/moroshma/resume-generator/user_service/user_service/internal/app"
+import "github.com/moroshma/resume-generator/user_service/internal/app"
 
 // @title			User Service API
 // @version         1.0

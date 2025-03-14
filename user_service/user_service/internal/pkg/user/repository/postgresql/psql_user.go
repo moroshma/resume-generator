@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/moroshma/resume-generator/user_service/user_service/internal/pkg/models"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 )
 
 type psqlUserRepository struct {
