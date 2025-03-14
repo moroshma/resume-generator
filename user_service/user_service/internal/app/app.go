@@ -12,9 +12,6 @@ import (
 	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
 	auth_handlers "github.com/moroshma/resume-generator/user_service/internal/pkg/auth/delivery/http"
 	token_usecase "github.com/moroshma/resume-generator/user_service/internal/pkg/auth/token/usecase"
-	role_handlers "github.com/moroshma/resume-generator/user_service/internal/pkg/role/delivery/http"
-	role_repository "github.com/moroshma/resume-generator/user_service/internal/pkg/role/repository/postgresql"
-	role_usecase "github.com/moroshma/resume-generator/user_service/internal/pkg/role/usecase"
 	user_handlers "github.com/moroshma/resume-generator/user_service/internal/pkg/user/delivery/http"
 	user_repository "github.com/moroshma/resume-generator/user_service/internal/pkg/user/repository/postgresql"
 	user_usecase "github.com/moroshma/resume-generator/user_service/internal/pkg/user/usecase"
@@ -33,11 +30,11 @@ func Run() {
 	r := chi.NewRouter()
 	r.Use(middleware.CORSMiddleware())
 
-	dbUser := cfg.UserService.Database.User
-	dbPassword := cfg.UserService.Database.Password
-	dbName := cfg.UserService.Database.Name
-	httpHost := cfg.UserService.HTTP.Host
-	httpPort := cfg.UserService.HTTP.Port
+	dbUser := cfg.Database.User
+	dbPassword := cfg.Database.Password
+	dbName := cfg.Database.Name
+	httpHost := cfg.HTTP.Host
+	httpPort := cfg.HTTP.Port
 
 	dbURL := fmt.Sprintf("postgres://%s:%s@users_db:5432/%s", dbUser, dbPassword, dbName)
 	dbpool, err := pgxpool.New(context.Background(), dbURL)
@@ -53,10 +50,8 @@ func Run() {
 
 	tokenUseCase := token_usecase.NewTokenUsecase()
 	userUseCase := user_usecase.NewUserUsecase(user_repository.NewPsqlUserRepository(dbpool))
-	roleUseCase := role_usecase.NewRoleUsecase(role_repository.NewPsqlRoleRepository(dbpool))
 
-	auth_handlers.NewAuthHandlers(r, userUseCase, tokenUseCase, roleUseCase)
-	role_handlers.NewRoleHandlers(r, roleUseCase)
+	auth_handlers.NewAuthHandlers(r, userUseCase, tokenUseCase)
 	user_handlers.NewUserHandlers(r, userUseCase)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
