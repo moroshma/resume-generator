@@ -1,0 +1,97 @@
+site_name: doc resume generator
+docs_dir: docs
+theme:
+    name: material
+    language: ru
+    font:
+      text: Roboto
+    features:
+      - navigation.instant
+      - navigation.tabs
+      - navigation.tracking
+      - navigation.tabs.sticky
+      - content.tabs.link
+      - content.tooltips
+      - navigation.top
+      - navigation.indexes
+      - search.suggest
+      - search.highlight
+      - search.share
+      - content.code.copy
+    palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Сменить светлую тему
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Сменить темную тему
+markdown_extensions:
+  - attr_list
+  - abbr
+  - def_list
+  - md_in_html
+  - admonition
+  - tables
+  - pymdownx.details
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      title: ""
+      permalink: "⩇"
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.betterem
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.snippets:
+      base_path:
+        - .
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+
+plugins:
+    - search:
+        lang:
+          - en
+          - ru
+        separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+    - redirects:
+        redirect_maps:
+            user-guide/plugins.md: dev-guide/plugins.md
+            user-guide/custom-themes.md: dev-guide/themes.md
+            user-guide/styling-your-docs.md: user-guide/choosing-your-theme.md  
+
+nav:
+  - Описание:
+    - Home: index.md
+
+  - resume gen:
+    - auth:
+      - логин: auth/login.md
+      - регистрация: auth/register.md
