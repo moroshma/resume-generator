@@ -1,4 +1,5 @@
-FROM golang:latest-alpine
+FROM golang:1.23.7-alpine
+LABEL maintainer="moroshma"
 
 WORKDIR /usr/src/app
 
