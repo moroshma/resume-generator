@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,7 +12,6 @@ import (
 
 type claimsWithRoles struct {
 	jwt.RegisteredClaims
-	Roles json.RawMessage `json:"roles"`
 }
 
 var SECRET = []byte("private-key")
@@ -107,23 +105,7 @@ func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
 			}
 
 			claims := token.Claims.(*claimsWithRoles)
-
-			var claimsRoles []string
-			err = json.Unmarshal(claims.Roles, &claimsRoles)
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-
-			for _, role := range roles {
-				for _, claimRole := range claimsRoles {
-					if role == claimRole {
-						next.ServeHTTP(w, r)
-						return
-					}
-				}
-			}
-
+			_ = claims
 			http.Error(w, "You do not have the necessary permissions", http.StatusUnauthorized)
 		})
 	}

@@ -1,70 +1,47 @@
 package usecase
 
 import (
-	"encoding/json"
-	"net/mail"
-
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type userUsercase struct {
+type userUseCase struct {
 	userRepository models.UserRepositoryI
 }
 
-func NewUserUsecase(userRepository models.UserRepositoryI) models.UserUsecaseI {
-	return &userUsercase{userRepository}
+func NewUserUseCase(userRepository models.UserRepositoryI) models.UserUseCaseI {
+	return &userUseCase{userRepository}
 }
 
-func validateUser(user models.User) error {
-	_, err := mail.ParseAddress(user.Login)
-	return err
-}
-
-func (uc *userUsercase) Create(user models.User) (uint, error) {
-	err := validateUser(user)
-	if err != nil {
-		return 0, err
-	}
-
+func (uc *userUseCase) CreateUser(user models.User) (uint, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return 0, err
 	}
 	user.Password = string(hashedPassword)
 
-	return uc.userRepository.Create(user)
+	return uc.userRepository.CreateUser(user)
 }
 
-func (uc *userUsercase) Get(id uint) (json.RawMessage, error) {
-	return uc.userRepository.Get(id)
+func (uc *userUseCase) CreateUserInfo(info models.UserInfo) (uint, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (uc *userUsercase) GetAll() (json.RawMessage, error) {
-	return uc.userRepository.GetAll()
+func (uc *userUseCase) UpdateUserInfo(u2 uint, info models.UserInfo) error {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (uc *userUsercase) Update(id uint, user models.User) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	user.Password = string(hashedPassword)
-
-	err = validateUser(user)
-	if err != nil {
-		return err
-	}
-
-	user.ID = id
-	return uc.userRepository.Update(user)
+func (uc *userUseCase) GetUserInfo(id uint) (models.UserInfo, error) {
+	return uc.userRepository.GetUserInfo(id)
 }
 
-func (uc *userUsercase) Delete(id uint) error {
-	return uc.userRepository.Delete(id)
+func (uc *userUseCase) Create(user models.User) (uint, error) {
+	panic("implement me")
 }
 
-func (uc *userUsercase) Authenticate(user models.User) (models.User, error) {
+func (uc *userUseCase) Authenticate(user models.User) (models.User, error) {
 	authUser, err := uc.userRepository.GetUserByLogin(user.Login)
 	if err != nil {
 		return models.User{}, err

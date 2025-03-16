@@ -75,23 +75,15 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
 
-plugins:
-    - search:
-        lang:
-          - en
-          - ru
-        separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
-    - redirects:
-        redirect_maps:
-            user-guide/plugins.md: dev-guide/plugins.md
-            user-guide/custom-themes.md: dev-guide/themes.md
-            user-guide/styling-your-docs.md: user-guide/choosing-your-theme.md  
-
 nav:
   - Описание:
     - Home: index.md
-
   - resume gen:
     - auth:
-      - логин: auth/login.md
-      - регистрация: auth/register.md
+      - проверка авторизации: auth/auth_check.md
+      - логин: auth/auth_login.md
+      - регистрация: auth/auth_register.md
+      - получение access token по refresh token: auth/auth_token.md
+      - получение информации о пользователе: auth/get_users_info.md
+      - создание информации о пользователе: auth/post_users_info.md
+      - изменение информации о пользователе: auth/put_users_info.md

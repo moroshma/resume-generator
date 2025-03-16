@@ -1,0 +1,8 @@
+database:
+  user: postgres
+  password: 1234
+  name: users_db
+
+http:
+  host: localhost
+  port: '8099'

@@ -130,7 +130,7 @@ const docTemplate = `{
                 "tags": [
                     "roles"
                 ],
-                "summary": "Get all roles",
+                "summary": "GetUserInfo all roles",
                 "responses": {
                     "200": {
                         "description": "List of roles",
@@ -228,7 +228,7 @@ const docTemplate = `{
                 "tags": [
                     "roles"
                 ],
-                "summary": "Get a role by ID",
+                "summary": "GetUserInfo a role by ID",
                 "parameters": [
                     {
                         "type": "string",
@@ -416,7 +416,7 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Get all users",
+                "summary": "GetUserInfo all users",
                 "responses": {
                     "200": {
                         "description": "List of users",
@@ -454,7 +454,7 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Get a user by ID",
+                "summary": "GetUserInfo a user by ID",
                 "parameters": [
                     {
                         "type": "string",

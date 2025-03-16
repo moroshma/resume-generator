@@ -11,14 +11,14 @@ import (
 )
 
 type authHandlers struct {
-	userUsecase  models.UserUsecaseI
+	userUsecase  models.UserUseCaseI
 	tokenUsecase models.TokenUsecaseI
 }
 
 func NewAuthHandlers(r *chi.Mux,
-	userUsecase models.UserUsecaseI,
-	tokenUsecase models.TokenUsecaseI) {
-	handlers := authHandlers{userUsecase, tokenUsecase}
+	userUseCase models.UserUseCaseI,
+	tokenUseCase models.TokenUsecaseI) {
+	handlers := authHandlers{userUseCase, tokenUseCase}
 
 	r.Get("/token", handlers.generateAccessTokenByRefreshToken)
 	r.Route("/auth", func(r chi.Router) {
@@ -46,7 +46,7 @@ func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	generatedID, err := handlers.userUsecase.Create(user)
+	generatedID, err := handlers.userUsecase.CreateUser(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
