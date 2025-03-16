@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  user_service:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - 3000:3000
+    depends_on:
+      - users_db
+  users_db:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+      - ./internal/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - 5432:5432
+
+volumes:
+  postgres-db:

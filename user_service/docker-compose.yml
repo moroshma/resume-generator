@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  gateway:
+    image: nginx:1.27.0-alpine
+    volumes:
+      - ./nginx:/etc/nginx/
+      - config:/config
+    ports:
+      - "8080:80"
+
+  # сервис авторизации
+  user_service:
+    build: ./user_service
+    depends_on:
+      - users_db
+    ports:
+      - 3000:3000
+    volumes:
+      - config:/config
+
+  users_db:
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_DB: "users_db"
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+      - ./user_service/internal/migrations:/docker-entrypoint-initdb.d
+
+volumes:
+  postgres-db:
+  pgdata:
+  config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./config
