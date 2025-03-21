@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  tarantool:
+    image: tarantool/tarantool:3
+    volumes:
+      - ./init:/opt/tarantool
+    ports:
+      - "3301:3301"
+    command: tarantool /opt/tarantool/init.lua
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10" 

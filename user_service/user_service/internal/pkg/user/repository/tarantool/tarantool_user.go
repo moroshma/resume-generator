@@ -1,17 +1,41 @@
 package tarantool
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
+	"errors"
+	"fmt"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
+	"github.com/tarantool/go-tarantool/v2"
 )
 
 type tarantoolUserRepository struct {
-	db *pgxpool.Pool
+	conn *tarantool.Connection
+}
+
+func NewTarantoolUserRepository(db *tarantool.Connection) models.UserRepositoryI {
+	return &tarantoolUserRepository{db}
 }
 
 func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
-	//TODO implement me
-	panic("implement me")
+	request := tarantool.NewCallRequest("create_new_user").Args([]interface{}{user.Login, user.Password})
+	resp, err := p.conn.Do(request).Get()
+	if err != nil {
+		return 0, err
+	}
+	if len(resp) == 0 {
+		return 0, errors.New("error create new user")
+	}
+
+	// Получаем первый элемент массива
+	data := resp[0].([]interface{})
+	if len(data) == 0 {
+		return 0, fmt.Errorf("invalid response format")
+	}
+
+	if v, ok := data[0].(int64); ok {
+		return uint(v), nil
+	}
+
+	return 0, fmt.Errorf("error create new user, %v", resp)
 }
 
 func (p tarantoolUserRepository) CreateUserInfo(info models.UserInfo) (uint, error) {
@@ -67,8 +91,4 @@ func (p tarantoolUserRepository) Authenticate(user models.User) (models.User, er
 func (p tarantoolUserRepository) GetUserByLogin(login string) (models.User, error) {
 	//TODO implement me
 	panic("implement me")
-}
-
-func NewPsqlUserRepository(db *pgxpool.Pool) models.UserRepositoryI {
-	return &tarantoolUserRepository{db}
 }

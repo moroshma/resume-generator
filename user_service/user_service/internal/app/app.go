@@ -1,9 +1,12 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"github.com/tarantool/go-tarantool/v2"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moroshma/resume-generator/user_service/internal/app/config"
@@ -28,26 +31,33 @@ func Run() {
 	r := chi.NewRouter()
 	r.Use(middleware.CORSMiddleware())
 
-	//dbUser := cfg.Database.User
-	//dbPassword := cfg.Database.Password
 	//dbName := cfg.Database.Name
+	dbUser := cfg.Database.User
+	dbPassword := cfg.Database.Password
 	httpHost := cfg.HTTP.Host
 	httpPort := cfg.HTTP.Port
 
-	//dbURL := fmt.Sprintf("postgres://%s:%s@users_db:5432/%s", dbUser, dbPassword, dbName)
-	//dbpool, err := pgxpool.New(context.Background(), dbURL)
-	//if err != nil {
-	//	log.Fatalf("Unable to create connection pool: %v\n", err)
-	//}
-	//defer dbpool.Close()
-	//
-	//err = dbpool.Ping(context.Background())
-	//if err != nil {
-	//	log.Fatalf("Unable to ping connection pool: %v\n", err)
-	//}
+	dialer := tarantool.NetDialer{
+		Address:  "127.0.0.1:3301",
+		User:     dbUser,
+		Password: dbPassword,
+	}
+
+	opts := tarantool.Opts{
+		Timeout: time.Hour,
+	}
+	conn, err := tarantool.Connect(context.Background(), dialer, opts)
+	if err != nil {
+		log.Fatalf("Connection failed: %s", err)
+	}
+	//defer conn.Close()
+	// Выполняем пинг
+	if err := pingTarantool(conn); err != nil {
+		log.Fatalf("Ping failed: %s", err)
+	}
 
 	tokenUseCase := token_usecase.NewTokenUsecase()
-	userUseCase := user_usecase.NewUserUseCase(user_repository.NewPsqlUserRepository(nil))
+	userUseCase := user_usecase.NewUserUseCase(user_repository.NewTarantoolUserRepository(conn))
 
 	auth_handlers.NewAuthHandlers(r, userUseCase, tokenUseCase)
 	user_handlers.NewUserHandlers(r, userUseCase)
@@ -64,4 +74,19 @@ func Run() {
 		log.Fatalf("Error starting server: %v", err)
 		return
 	}
+}
+func pingTarantool(conn *tarantool.Connection) error {
+	// Создаем ping запрос
+	req := tarantool.NewPingRequest()
+
+	// Выполняем запрос
+	resp := conn.Do(req)
+
+	// Ждем ответ
+	_, err := resp.GetResponse()
+	if err != nil {
+		return fmt.Errorf("ping failed: %w", err)
+	}
+
+	return nil
 }
