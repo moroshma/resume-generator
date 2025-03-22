@@ -7,6 +7,7 @@ type User struct {
 }
 
 type UserInfo struct {
+	UserID         uint           `json:"user_id,omitempty"`
 	Name           string         `json:"name,required"`
 	Surname        string         `json:"surname,required"`
 	Email          string         `json:"email,omitempty"`

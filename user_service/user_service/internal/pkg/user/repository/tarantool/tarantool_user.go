@@ -1,10 +1,12 @@
 package tarantool
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 	"github.com/tarantool/go-tarantool/v2"
+	"log/slog"
 )
 
 type tarantoolUserRepository struct {
@@ -21,21 +23,50 @@ func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	if len(resp) == 0 {
 		return 0, errors.New("error create new user")
 	}
 
-	// Получаем первый элемент массива
-	data := resp[0].([]interface{})
+	data := resp[0].(map[interface{}]interface{})
 	if len(data) == 0 {
 		return 0, fmt.Errorf("invalid response format")
 	}
 
-	if v, ok := data[0].(int64); ok {
-		return uint(v), nil
+	var retUser models.User
+	for k, v := range data {
+		key, ok := k.(string)
+		if !ok {
+			return 0, fmt.Errorf("invalid response format")
+		}
+		switch key {
+		case "status":
+			status, ok := v.(uint8)
+			if !ok {
+				return 0, fmt.Errorf("invalid response format")
+			}
+			if status != 200 {
+				return 0, fmt.Errorf("error create new user, %v", resp)
+			}
+		case "body":
+			checkErr := CheckErrorResponse(v.(string))
+
+			if checkErr.HasError() {
+				return 0, checkErr
+			}
+
+			err = json.Unmarshal([]byte(v.(string)), &retUser)
+			if err != nil {
+				return 0, err
+			}
+		case "headers":
+			continue
+		default:
+			slog.Any("invalid response format CreateUser", k)
+		}
 	}
 
-	return 0, fmt.Errorf("error create new user, %v", resp)
+	return retUser.ID, nil
 }
 
 func (p tarantoolUserRepository) CreateUserInfo(info models.UserInfo) (uint, error) {
@@ -84,11 +115,57 @@ func (p tarantoolUserRepository) GetUserInfo(id uint) (models.UserInfo, error) {
 }
 
 func (p tarantoolUserRepository) Authenticate(user models.User) (models.User, error) {
-	//TODO implement me
 	panic("implement me")
 }
 
 func (p tarantoolUserRepository) GetUserByLogin(login string) (models.User, error) {
-	//TODO implement me
-	panic("implement me")
+	request := tarantool.NewCallRequest("get_user_by_login").Args([]interface{}{login})
+	resp, err := p.conn.Do(request).Get()
+	if err != nil {
+		return models.User{}, err
+	}
+
+	if len(resp) == 0 {
+		return models.User{}, errors.New("error login user")
+	}
+
+	data := resp[0].(map[interface{}]interface{})
+	if len(data) == 0 {
+		return models.User{}, fmt.Errorf("invalid response format")
+	}
+
+	var retUser models.User
+	for k, v := range data {
+		key, ok := k.(string)
+		if !ok {
+			return models.User{}, fmt.Errorf("invalid response format")
+		}
+		switch key {
+		case "status":
+			status, ok := v.(uint8)
+			if !ok {
+				return models.User{}, fmt.Errorf("invalid response format")
+			}
+			if status != 200 {
+				return models.User{}, fmt.Errorf("error login, %v", resp)
+			}
+		case "body":
+			checkErr := CheckErrorResponse(v.(string))
+
+			if checkErr.HasError() {
+				return models.User{}, checkErr
+			}
+
+			err = json.Unmarshal([]byte(v.(string)), &retUser)
+			if err != nil {
+				return models.User{}, err
+			}
+		case "headers":
+			continue
+		default:
+			slog.Any("invalid response format GetUserByLogin", k)
+		}
+	}
+
+	return retUser, nil
 }

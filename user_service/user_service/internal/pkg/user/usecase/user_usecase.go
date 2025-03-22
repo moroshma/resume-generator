@@ -24,8 +24,7 @@ func (uc *userUseCase) CreateUser(user models.User) (uint, error) {
 }
 
 func (uc *userUseCase) CreateUserInfo(info models.UserInfo) (uint, error) {
-	//TODO implement me
-	panic("implement me")
+	return uc.userRepository.CreateUserInfo(info)
 }
 
 func (uc *userUseCase) UpdateUserInfo(u2 uint, info models.UserInfo) error {

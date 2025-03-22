@@ -5,6 +5,9 @@ services:
     image: tarantool/tarantool:3
     volumes:
       - ./init:/opt/tarantool
+      - ./utils:/opt/tarantool/utils
+    environment:
+      - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua
     ports:
       - "3301:3301"
     command: tarantool /opt/tarantool/init.lua

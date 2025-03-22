@@ -4,7 +4,7 @@ box.cfg {
 }
 
 require('log').info("I am a test app!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-local utils = require('./tarantool_database/utils/utils')
+local utils = require('utils.utils')
 
 -- Создаем спейс для пользователей если он не существует
 local function create_spaces()
@@ -69,17 +69,27 @@ function create_new_user(login, password)
     users:insert({ new_id, login, password })
     require('log').info("add new user " .. tostring(new_id))
 
-    return utils.raw_response({ new_id = new_id })
+    return utils.raw_response({id = new_id})
+end
+
+function get_user_by_login(login)
+    if type(login) ~= 'string' then
+        return utils.raw_response({ error = "Login and password must be strings" })
+    end
+
+    local users = box.space.users
+    local user = users.index.login:get(login)
+    if user == nil then
+        return utils.raw_response({ error = "User not found" })
+    end
+    
+    return utils.raw_response({ id = user[1], login = user[2], password = user[3] })
 end
 
 -- Вызываем функции инициализации
 box.once('init', function()
     create_spaces()
     create_user()
-
-    -- Добавляем тестового пользователя в спейс
-    local users = box.space.users
-    users:insert({ 1, 'testuser', 'testpass' })
 end)
 
 -- В конце файла
