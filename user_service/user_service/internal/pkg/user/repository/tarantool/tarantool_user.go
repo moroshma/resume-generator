@@ -70,8 +70,61 @@ func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
 }
 
 func (p tarantoolUserRepository) CreateUserInfo(info models.UserInfo) (uint, error) {
-	//TODO implement me
-	panic("implement me")
+	// Сериализуем информацию о пользователе в JSON
+	jsonData, err := json.Marshal(info)
+	if err != nil {
+		return 0, fmt.Errorf("error marshaling user info: %w", err)
+	}
+
+	// Создаем запрос к Tarantool
+	request := tarantool.NewCallRequest("create_user_info").Args([]interface{}{string(jsonData)})
+	resp, err := p.conn.Do(request).Get()
+	if err != nil {
+		return 0, fmt.Errorf("error calling create_user_info: %w", err)
+	}
+
+	if len(resp) == 0 {
+		return 0, errors.New("empty response from create_user_info")
+	}
+
+	data := resp[0].(map[interface{}]interface{})
+	if len(data) == 0 {
+		return 0, fmt.Errorf("invalid response format")
+	}
+
+	var retUser models.User
+	for k, v := range data {
+		key, ok := k.(string)
+		if !ok {
+			return 0, fmt.Errorf("invalid response format")
+		}
+		switch key {
+		case "status":
+			status, ok := v.(uint8)
+			if !ok {
+				return 0, fmt.Errorf("invalid response format")
+			}
+			if status != 200 {
+				return 0, fmt.Errorf("error create new user, %v", resp)
+			}
+		case "body":
+			checkErr := CheckErrorResponse(v.(string))
+			if checkErr.HasError() {
+				return 0, checkErr
+			}
+
+			err = json.Unmarshal([]byte(v.(string)), &retUser)
+			if err != nil {
+				return 0, fmt.Errorf("error unmarshaling response: %w", err)
+			}
+		case "headers":
+			continue
+		default:
+			slog.Any("invalid response format CreateUserInfo", k)
+		}
+	}
+
+	return retUser.ID, nil
 }
 
 func (p tarantoolUserRepository) UpdateUserInfo(u uint, info models.UserInfo) error {

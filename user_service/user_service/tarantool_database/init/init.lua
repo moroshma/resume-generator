@@ -82,7 +82,7 @@ function get_user_by_login(login)
     if user == nil then
         return utils.raw_response({ error = "User not found" })
     end
-    
+
     return utils.raw_response({ id = user[1], login = user[2], password = user[3] })
 end
 

@@ -24,8 +24,8 @@ func NewAuthHandlers(r *chi.Mux,
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", handlers.register)
 		r.Post("/login", handlers.logIn)
-		r.With(middleware.AuthMiddleware("user", "admin")).Delete("/logout", handlers.logOut)
-		r.With(middleware.AuthMiddleware("user", "admin")).Get("/check", handlers.authCheck)
+		r.With(middleware.AuthMiddleware()).Delete("/logout", handlers.logOut)
+		r.With(middleware.AuthMiddleware()).Get("/check", handlers.authCheck)
 	})
 }
 

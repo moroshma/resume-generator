@@ -2,8 +2,9 @@ package http
 
 import (
 	"encoding/json"
+	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
@@ -18,7 +19,7 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 
 	r.Route("/api/v001/users", func(r chi.Router) {
 		r.Route("/info", func(r chi.Router) {
-			r.Get("/", handlers.getInfo)
+			r.With(middleware.AuthMiddleware()).Get("/", handlers.getInfo)
 			r.Put("/", handlers.updateUserInfo)
 			r.Post("/", handlers.createUserInfo)
 		})
@@ -37,14 +38,25 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 // @Failure 401 {string} string "Unauthorized"
 // @Router /users/info [getInfo]
 func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
-	user, err := handlers.userUseCase.GetUserInfo(1)
+	tokenCookie, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
+		return
+	}
+	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
+	id, err := middleware.GetUserIDByAccessToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	user, err := handlers.userUseCase.GetUserInfo(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	res, err := json.Marshal(user)
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -68,10 +80,16 @@ func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /users/{id} [put]
 func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.ParseUint(idParam, 10, 64)
+	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
+	id, err := middleware.GetUserIDByAccessToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -92,5 +110,30 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 }
 
 func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Request) {
-	panic("implement me")
+	tokenCookie, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
+		return
+	}
+	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
+	id, err := middleware.GetUserIDByAccessToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	var user models.UserInfo
+	err = json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = handlers.userUseCase.UpdateUserInfo(uint(id), user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

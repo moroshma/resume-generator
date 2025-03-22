@@ -1,7 +1,6 @@
 package auth_middleware
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,7 +13,7 @@ import (
 
 type claimsWithRoles struct {
 	jwt.RegisteredClaims
-	Roles json.RawMessage `json:"roles"`
+	UserID string `json:"user_id"`
 }
 
 var SECRET = []byte("private-key")
@@ -106,16 +105,16 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims := token.Claims.(*claimsWithRoles)
+		//claims := token.Claims.(*claimsWithRoles)
+		_ = token
+		//var claimsRoles []string
 
-		var claimsRoles []string
-
-		err = json.Unmarshal(claims.Roles, &claimsRoles)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			c.Abort()
-			return
-		}
+		//err = json.Unmarshal(claims.UserID, &claimsRoles)
+		//if err != nil {
+		//	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		//	c.Abort()
+		//	return
+		//}
 
 		c.Next()
 	}
