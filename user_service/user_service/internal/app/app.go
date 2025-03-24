@@ -56,7 +56,7 @@ func Run() {
 		log.Fatalf("Ping failed: %s", err)
 	}
 
-	tokenUseCase := token_usecase.NewTokenUsecase()
+	tokenUseCase := token_usecase.NewTokenUseCase()
 	userUseCase := user_usecase.NewUserUseCase(user_repository.NewTarantoolUserRepository(conn))
 
 	auth_handlers.NewAuthHandlers(r, userUseCase, tokenUseCase)

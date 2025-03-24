@@ -11,8 +11,8 @@ import (
 )
 
 type authHandlers struct {
-	userUsecase  models.UserUseCaseI
-	tokenUsecase models.TokenUsecaseI
+	userUseCase  models.UserUseCaseI
+	tokenUseCase models.TokenUsecaseI
 }
 
 func NewAuthHandlers(r *chi.Mux,
@@ -46,7 +46,7 @@ func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	generatedID, err := handlers.userUsecase.CreateUser(user)
+	generatedID, err := handlers.userUseCase.CreateUser(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -75,13 +75,13 @@ func (handlers *authHandlers) logIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authUser, err := handlers.userUsecase.Authenticate(user)
+	authUser, err := handlers.userUseCase.Authenticate(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	refreshToken, err := handlers.tokenUsecase.GenerateRefreshTokenByUserID(authUser.ID)
+	refreshToken, err := handlers.tokenUseCase.GenerateRefreshTokenByUserID(authUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -94,12 +94,7 @@ func (handlers *authHandlers) logIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(authUser.ID)
+	accessToken, err := handlers.tokenUseCase.GenerateAccessTokenByUserID(authUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -155,13 +150,13 @@ func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseW
 
 	refreshToken := refreshTokenCookie.Value
 
-	userID, err := handlers.tokenUsecase.GetUserIDByRefreshToken(refreshToken)
+	userID, err := handlers.tokenUseCase.GetUserIDByRefreshToken(refreshToken)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(userID)
+	accessToken, err := handlers.tokenUseCase.GenerateAccessTokenByUserID(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
