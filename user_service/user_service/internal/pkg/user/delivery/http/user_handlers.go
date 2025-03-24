@@ -17,11 +17,11 @@ type userHandlers struct {
 func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 	handlers := &userHandlers{userUsecase}
 
-	r.Route("/api/v001/users", func(r chi.Router) {
-		r.Route("/info", func(r chi.Router) {
-			r.With(middleware.AuthMiddleware()).Get("/", handlers.getInfo)
-			r.Put("/", handlers.updateUserInfo)
-			r.Post("/", handlers.createUserInfo)
+	r.Route("/api/v001", func(r chi.Router) {
+		r.Route("/users", func(r chi.Router) {
+			r.With(middleware.AuthMiddleware()).Get("/info", handlers.getInfo)
+			r.Put("/info", handlers.updateUserInfo)
+			r.Post("/info", handlers.createUserInfo)
 		})
 	})
 }
@@ -100,7 +100,7 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = handlers.userUseCase.UpdateUserInfo(uint(id), user)
+	err = handlers.userUseCase.UpdateUserInfo(id, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

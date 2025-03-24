@@ -51,8 +51,7 @@ type UserUseCaseI interface {
 type UserRepositoryI interface {
 	CreateUser(User) (uint, error)
 	CreateUserInfo(UserInfo) error
-	UpdateUserInfo(uint, UserInfo) error
+	UpdateUserInfo(UserInfo) error
 	GetUserInfo(id uint) (UserInfo, error)
 	GetUserByLogin(login string) (User, error)
-	Authenticate(User) (User, error)
 }

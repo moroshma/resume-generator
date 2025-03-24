@@ -317,6 +317,7 @@ function get_user_info(user_id)
     )
 end
 
+
 -- Функция для получения пользователя по логину
 function get_user_by_login(login)
     if type(login) ~= 'string' then
@@ -338,6 +339,51 @@ function get_user_by_login(login)
 
 end
 
+-- New function to update user info based on provided JSON
+function update_user_info(info)
+    if type(info) ~= 'string' then
+        return utils.raw_response({ error = "Info must be a JSON string" })
+    end
+
+    local data = json.decode(info)
+    if not data then
+        return utils.raw_response({ error = "Invalid JSON format" })
+    end
+
+    if not data.user_id then
+        return utils.raw_response({ error = "User_id is required" })
+    end
+
+    local user_info_space = box.space.user_info
+    local user = user_info_space:get(data.user_id)
+    if not user then
+        return utils.raw_response({ error = "User not found" })
+    end
+
+    local updates = {}
+    if data.name then table.insert(updates, {'=', 2, data.name}) end
+    if data.surname then table.insert(updates, {'=', 3, data.surname}) end
+    if data.email then table.insert(updates, {'=', 4, data.email}) end
+    if data.github then table.insert(updates, {'=', 5, data.github}) end
+    if data.phone_number then table.insert(updates, {'=', 6, data.phone_number}) end
+    if data.location then table.insert(updates, {'=', 7, data.location}) end
+    if data.social_profiles then
+        if data.social_profiles.linkedin then
+            table.insert(updates, {'=', 8, data.social_profiles.linkedin})
+        end
+        if data.social_profiles.telegram then
+            table.insert(updates, {'=', 9, data.social_profiles.telegram})
+        end
+    end
+
+    if #updates == 0 then
+        return utils.raw_response({ error = "No fields to update" })
+    end
+
+    user_info_space:update(data.user_id, updates)
+    return utils.raw_response({ status = 200, body = json.encode({ user_id = data.user_id, updated_fields = updates }) })
+end
+
 -- Вызываем функции инициализации
 box.once('init', function()
     create_spaces()
@@ -346,3 +392,4 @@ end)
 
 -- В конце файла
 require('log').info("Initialization completed!")
+

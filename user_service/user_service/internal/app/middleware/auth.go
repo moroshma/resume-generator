@@ -53,7 +53,7 @@ func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
 		return cookie.Value, nil
 	}
 
-	return "", errors.New("Unexpected error")
+	return "", errors.New("unexpected error")
 }
 
 func AuthMiddleware() func(http.Handler) http.Handler {

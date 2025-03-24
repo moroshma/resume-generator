@@ -21,7 +21,7 @@ func NewAuthHandlers(r *chi.Mux,
 	handlers := authHandlers{userUseCase, tokenUseCase}
 
 	r.Get("/api/v001/token", handlers.generateAccessTokenByRefreshToken)
-	r.Route("/auth", func(r chi.Router) {
+	r.Route("/api/v001/auth", func(r chi.Router) {
 		r.Post("/register", handlers.register)
 		r.Post("/login", handlers.logIn)
 		r.With(middleware.AuthMiddleware()).Delete("/logout", handlers.logOut)

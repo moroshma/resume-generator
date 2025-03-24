@@ -86,13 +86,62 @@ func (p tarantoolUserRepository) CreateUserInfo(info models.UserInfo) error {
 	return nil
 }
 
-func (p tarantoolUserRepository) UpdateUserInfo(u uint, info models.UserInfo) error {
-	//TODO implement me
-	panic("implement me")
+func (p tarantoolUserRepository) UpdateUserInfo(info models.UserInfo) error {
+
+	jsonData, err := json.Marshal(info)
+	if err != nil {
+		return fmt.Errorf("error marshalling user info: %w", err)
+	}
+
+	request := tarantool.NewCallRequest("update_user_info").Args([]interface{}{string(jsonData)})
+	resp, err := p.conn.Do(request).Get()
+	if err != nil {
+		return fmt.Errorf("error calling update_user_info: %w", err)
+	}
+
+	if len(resp) == 0 {
+		return fmt.Errorf("empty response from update_user_info")
+	}
+
+	data, ok := resp[0].(map[interface{}]interface{})
+	if !ok || len(data) == 0 {
+		return fmt.Errorf("invalid response from update_user_info")
+	}
+
+	var status uint8
+	var body string
+	for k, v := range data {
+		key, ok := k.(string)
+		if !ok {
+			return fmt.Errorf("invalid response format")
+		}
+		switch key {
+		case "status":
+			status, ok = v.(uint8)
+			if !ok {
+				return fmt.Errorf("invalid status value")
+			}
+		case "body":
+			body, _ = v.(string)
+		}
+	}
+
+	if status != 200 {
+		var errMsg string
+		if body != "" {
+			errMsg = body
+		}
+		return fmt.Errorf("update_user_info failed: %s", errMsg)
+	}
+
+	if errorResponse := CheckErrorResponse(body); errorResponse.HasError() {
+		return errorResponse
+	}
+
+	return nil
 }
 
 func (p tarantoolUserRepository) GetUserInfo(id uint) (models.UserInfo, error) {
-	// Создаем запрос к Tarantool
 	request := tarantool.NewCallRequest("get_user_info").Args([]interface{}{id})
 	resp, err := p.conn.Do(request).Get()
 	if err != nil {
@@ -137,10 +186,6 @@ func (p tarantoolUserRepository) GetUserInfo(id uint) (models.UserInfo, error) {
 	}
 
 	return userInfo, nil
-}
-
-func (p tarantoolUserRepository) Authenticate(user models.User) (models.User, error) {
-	panic("implement me")
 }
 
 func (p tarantoolUserRepository) GetUserByLogin(login string) (models.User, error) {
