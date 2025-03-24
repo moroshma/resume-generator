@@ -128,8 +128,9 @@ func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Requ
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	user.UserID = id
 
-	err = handlers.userUseCase.UpdateUserInfo(uint(id), user)
+	err = handlers.userUseCase.CreateUserInfo(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

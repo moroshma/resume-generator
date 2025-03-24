@@ -20,7 +20,7 @@ func NewAuthHandlers(r *chi.Mux,
 	tokenUseCase models.TokenUsecaseI) {
 	handlers := authHandlers{userUseCase, tokenUseCase}
 
-	r.Get("/token", handlers.generateAccessTokenByRefreshToken)
+	r.Get("/api/v001/token", handlers.generateAccessTokenByRefreshToken)
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", handlers.register)
 		r.Post("/login", handlers.logIn)

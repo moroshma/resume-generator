@@ -23,7 +23,7 @@ func (uc *userUseCase) CreateUser(user models.User) (uint, error) {
 	return uc.userRepository.CreateUser(user)
 }
 
-func (uc *userUseCase) CreateUserInfo(info models.UserInfo) (uint, error) {
+func (uc *userUseCase) CreateUserInfo(info models.UserInfo) error {
 	return uc.userRepository.CreateUserInfo(info)
 }
 
