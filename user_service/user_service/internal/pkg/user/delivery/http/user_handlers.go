@@ -36,7 +36,7 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 // @Success 200 {object} models.User "User object"
 // @Failure 400 {string} string "Bad Request"
 // @Failure 401 {string} string "Unauthorized"
-// @Router /users/info [getInfo]
+// @Router /api/v001/users/info [get]
 func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {
@@ -78,7 +78,7 @@ func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {string} string "Bad Request"
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal Server Error"
-// @Router /users/{id} [put]
+// @Router /api/v001/users/info [put]
 func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {
@@ -109,6 +109,18 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 }
 
+// createUserInfo creates a new user info entry.
+// @Summary Create a new user info
+// @Description Creates a new user info entry for the authenticated user.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.UserInfo true "User info details"
+// @Success 200 {string} string "OK"
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/v001/users/info [post]
 func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {

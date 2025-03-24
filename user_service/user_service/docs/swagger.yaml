@@ -1,9 +1,33 @@
 definitions:
-  models.Role:
+  models.Education:
     properties:
-      id:
-        type: integer
-      name:
+      degree:
+        type: string
+      from:
+        type: string
+      institution:
+        type: string
+      to:
+        type: string
+    type: object
+  models.Experience:
+    properties:
+      company:
+        type: string
+      description:
+        type: string
+      from:
+        type: string
+      role:
+        type: string
+      to:
+        type: string
+    type: object
+  models.SocialProfiles:
+    properties:
+      linkedin:
+        type: string
+      telegram:
         type: string
     type: object
   models.User:
@@ -14,15 +38,42 @@ definitions:
         type: string
       password:
         type: string
-      roles:
+    type: object
+  models.UserInfo:
+    properties:
+      education:
         items:
-          $ref: '#/definitions/models.Role'
+          $ref: '#/definitions/models.Education'
         type: array
+      email:
+        type: string
+      experience:
+        items:
+          $ref: '#/definitions/models.Experience'
+        type: array
+      github:
+        type: string
+      languages:
+        items:
+          type: string
+        type: array
+      location:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+      social_profiles:
+        $ref: '#/definitions/models.SocialProfiles'
+      surname:
+        type: string
+      user_id:
+        type: integer
     type: object
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
-host: localhost:8080
+host: localhost:8099
 info:
   contact: {}
   description: This is a sample server celler server.
@@ -30,7 +81,7 @@ info:
   title: User Service API
   version: "1.0"
 paths:
-  /auth/login:
+  /api/v001/auth/login:
     post:
       consumes:
       - application/json
@@ -58,7 +109,7 @@ paths:
       summary: User login
       tags:
       - Authentication
-  /auth/logout:
+  /api/v001/auth/logout:
     delete:
       description: Logs out a user by clearing access and refresh tokens.
       responses:
@@ -69,7 +120,7 @@ paths:
       summary: User logout
       tags:
       - Authentication
-  /auth/register:
+  /api/v001/auth/register:
     post:
       consumes:
       - application/json
@@ -93,179 +144,7 @@ paths:
       summary: Register a new user
       tags:
       - Authentication
-  /roles:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all roles
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of roles
-          schema:
-            items:
-              $ref: '#/definitions/models.Role'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      security:
-      - JWT: []
-      summary: Get all roles
-      tags:
-      - roles
-    post:
-      consumes:
-      - application/json
-      description: Create a new role with the provided JSON body
-      parameters:
-      - description: Role object to be created
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/models.Role'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      security:
-      - JWT: []
-      summary: Create a new role
-      tags:
-      - roles
-  /roles/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete an existing role identified by its ID
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      security:
-      - JWT: []
-      summary: Delete a role by ID
-      tags:
-      - roles
-    get:
-      consumes:
-      - application/json
-      description: Retrieve a role by its ID
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Role object
-          schema:
-            $ref: '#/definitions/models.Role'
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      security:
-      - JWT: []
-      summary: Get a role by ID
-      tags:
-      - roles
-    put:
-      consumes:
-      - application/json
-      description: Update an existing role identified by its ID with the provided
-        JSON body
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Updated role object
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/models.Role'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      security:
-      - JWT: []
-      summary: Update a role by ID
-      tags:
-      - roles
-  /token:
+  /api/v001/token:
     get:
       description: Generates a new access token based on the refresh token.
       responses:
@@ -280,64 +159,7 @@ paths:
       summary: Generate access token
       tags:
       - Authentication
-  /users:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all users
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of users
-          schema:
-            items:
-              $ref: '#/definitions/models.User'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      summary: Get all users
-      tags:
-      - users
-  /users/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete an existing user identified by its ID
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      summary: Delete a user by ID
-      tags:
-      - users
+  /api/v001/users/info:
     get:
       consumes:
       - application/json
@@ -363,11 +185,40 @@ paths:
           description: Unauthorized
           schema:
             type: string
-        "404":
-          description: Not Found
+      summary: GetUserInfo a user by ID
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user info entry for the authenticated user.
+      parameters:
+      - description: User info details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
           schema:
             type: string
-      summary: Get a user by ID
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create a new user info
       tags:
       - users
     put:
