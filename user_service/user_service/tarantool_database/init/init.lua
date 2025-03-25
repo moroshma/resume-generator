@@ -243,7 +243,7 @@ function create_user_info(info)
             box.space.languages:insert({
                 get_next_id('languages'),
                 user_id,
-                lang
+                lang.language
             })
         end
     end
@@ -289,6 +289,7 @@ function get_user_info(user_id)
     -- Получаем образование
     for _, edu in box.space.education.index.user_id:pairs(user_id) do
         table.insert(result.education, {
+            education_id = edu[1],
             institution = edu[3],
             degree = edu[4],
             from = edu[5],
@@ -299,6 +300,7 @@ function get_user_info(user_id)
     -- Получаем опыт работы
     for _, exp in box.space.experience.index.user_id:pairs(user_id) do
         table.insert(result.experience, {
+            experience_id = exp[1],
             company = exp[3],
             role = exp[4],
             from = exp[5],
@@ -309,7 +311,10 @@ function get_user_info(user_id)
 
     -- Получаем языки
     for _, lang in box.space.languages.index.user_id:pairs(user_id) do
-        table.insert(result.languages, lang[3])
+        table.insert(result.languages, {
+            language_id = lang[1],
+            language = lang[3]
+        })
     end
 
     return utils.raw_response(
@@ -331,7 +336,6 @@ function get_user_by_login(login)
     end
 
     return utils.raw_response({
-        status = 200,
         id = user[1],
         login = user[2],
         password = user[3]
@@ -361,23 +365,38 @@ function update_user_info(info)
     end
 
     local updates = {}
-    if data.name then table.insert(updates, {'=', 2, data.name}) end
-    if data.surname then table.insert(updates, {'=', 3, data.surname}) end
-    if data.email then table.insert(updates, {'=', 4, data.email}) end
-    if data.github then table.insert(updates, {'=', 5, data.github}) end
-    if data.phone_number then table.insert(updates, {'=', 6, data.phone_number}) end
-    if data.location then table.insert(updates, {'=', 7, data.location}) end
+    if data.name then
+        table.insert(updates, { '=', 2, data.name })
+    end
+    if data.surname then
+        table.insert(updates, { '=', 3, data.surname })
+    end
+    if data.email then
+        table.insert(updates, { '=', 4, data.email })
+    end
+    if data.github then
+        table.insert(updates, { '=', 5, data.github })
+    end
+    if data.phone_number then
+        table.insert(updates, { '=', 6, data.phone_number })
+    end
+    if data.location then
+        table.insert(updates, { '=', 7, data.location })
+    end
     if data.social_profiles then
         if data.social_profiles.linkedin then
-            table.insert(updates, {'=', 8, data.social_profiles.linkedin})
+            table.insert(updates, { '=', 8, data.social_profiles.linkedin })
         end
         if data.social_profiles.telegram then
-            table.insert(updates, {'=', 9, data.social_profiles.telegram})
+            table.insert(updates, { '=', 9, data.social_profiles.telegram })
         end
     end
 
+
+
+
     if #updates == 0 then
-        return utils.raw_response({ error = "No fields to update" })
+        return utils.raw_response( {error = "No fields to update" })
     end
 
     user_info_space:update(data.user_id, updates)

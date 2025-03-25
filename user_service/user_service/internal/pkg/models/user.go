@@ -26,7 +26,7 @@ type Language struct {
 }
 
 type Education struct {
-	EducationID uint   `json:"education_id,omitempty"`
+	EducationID *uint  `json:"education_id,omitempty"`
 	Institution string `json:"institution,omitempty"`
 	Degree      string `json:"degree,omitempty"`
 	From        string `json:"from,omitempty"`
@@ -34,7 +34,7 @@ type Education struct {
 }
 
 type Experience struct {
-	ExperienceID uint   `json:"experience_id,omitempty"`
+	ExperienceID *uint  `json:"experience_id,omitempty"`
 	Company      string `json:"company,omitempty"`
 	Role         string `json:"role,omitempty"`
 	From         string `json:"from,omitempty"`
