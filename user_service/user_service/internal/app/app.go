@@ -34,23 +34,31 @@ func Run() {
 	//dbName := cfg.Database.Name
 	dbUser := cfg.Database.User
 	dbPassword := cfg.Database.Password
+	dbHost := cfg.Database.Host
 	httpHost := cfg.HTTP.Host
 	httpPort := cfg.HTTP.Port
 
 	dialer := tarantool.NetDialer{
-		Address:  "127.0.0.1:3301",
+		Address:  dbHost,
 		User:     dbUser,
 		Password: dbPassword,
 	}
-
+	// Configure connection options
 	opts := tarantool.Opts{
-		Timeout: time.Hour,
+		Timeout:       5 * time.Second,
+		Reconnect:     1 * time.Second,
+		MaxReconnects: 0,
+		Notify:        make(chan tarantool.ConnEvent, 10),
 	}
+
+	// Establish the connection
 	conn, err := tarantool.Connect(context.Background(), dialer, opts)
 	if err != nil {
-		log.Fatalf("Connection failed: %s", err)
+		log.Fatalf("Failed to connect: %s", err)
 	}
-	//defer conn.Close()
+
+	defer conn.Close()
+
 	// Выполняем пинг
 	if err := pingTarantool(conn); err != nil {
 		log.Fatalf("Ping failed: %s", err)

@@ -20,8 +20,8 @@ func NewAuthHandlers(r *chi.Mux,
 	tokenUseCase models.TokenUsecaseI) {
 	handlers := authHandlers{userUseCase, tokenUseCase}
 
-	r.Get("/api/v001/token", handlers.generateAccessTokenByRefreshToken)
 	r.Route("/api/v001/auth", func(r chi.Router) {
+		r.Get("/refresh", handlers.generateAccessTokenByRefreshToken)
 		r.Post("/register", handlers.register)
 		r.Post("/login", handlers.logIn)
 		r.With(middleware.AuthMiddleware()).Delete("/logout", handlers.logOut)
@@ -165,6 +165,20 @@ func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseW
 	http.SetCookie(w, &http.Cookie{
 		Name:     "Authorization",
 		Value:    fmt.Sprintf("Bearer %s", accessToken),
+		Path:     "/",
+		HttpOnly: true,
+	})
+
+	refreshToken, err = handlers.tokenUseCase.GenerateRefreshTokenByUserID(userID)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "Refresh-Token",
+		Value:    refreshToken,
 		Path:     "/",
 		HttpOnly: true,
 	})
