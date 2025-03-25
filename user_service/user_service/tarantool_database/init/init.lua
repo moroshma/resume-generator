@@ -364,6 +364,7 @@ function update_user_info(info)
         return utils.raw_response({ error = "User not found" })
     end
 
+    -- Update main user info
     local updates = {}
     if data.name then
         table.insert(updates, { '=', 2, data.name })
@@ -392,12 +393,90 @@ function update_user_info(info)
         end
     end
 
-    if #updates == 0 then
-        return utils.raw_response({ error = "No fields to update" })
+    if #updates > 0 then
+        user_info_space:update(data.user_id, updates)
     end
 
-    user_info_space:update(data.user_id, updates)
-    return utils.raw_response({ status = 200, body = json.encode({ user_id = data.user_id, updated_fields = updates }) })
+    if data.education then
+        for _, edu in ipairs(data.education) do
+            local edu_id = edu.education_id or get_next_id('education')
+            local update_ops = {}
+            if edu.institution and edu.institution ~= "" then
+                table.insert(update_ops, { '=', 3, edu.institution })
+            end
+            if edu.degree and edu.degree ~= "" then
+                table.insert(update_ops, { '=', 4, edu.degree })
+            end
+            if edu.from and edu.from ~= "" then
+                table.insert(update_ops, { '=', 5, edu.from })
+            end
+            if edu.to and edu.to ~= "" then
+                table.insert(update_ops, { '=', 6, edu.to })
+            end
+            box.space.education:upsert({
+                edu_id,
+                data.user_id,
+                edu.institution or '',
+                edu.degree or '',
+                edu.from or '',
+                edu.to or ''
+            }, update_ops)
+        end
+    end
+
+    -- Update experience
+    if data.experience then
+        for _, exp in ipairs(data.experience) do
+            local exp_id = exp.experience_id or get_next_id('experience')
+            local update_ops = {}
+            if exp.company and exp.company ~= "" then
+                table.insert(update_ops, { '=', 3, exp.company })
+            end
+            if exp.role and exp.role ~= "" then
+                table.insert(update_ops, { '=', 4, exp.role })
+            end
+            if exp.from and exp.from ~= "" then
+                table.insert(update_ops, { '=', 5, exp.from })
+            end
+            if exp.to and exp.to ~= "" then
+                table.insert(update_ops, { '=', 6, exp.to })
+            end
+            if exp.description and exp.description ~= "" then
+                table.insert(update_ops, { '=', 7, exp.description })
+            end
+            box.space.experience:upsert({
+                exp_id,
+                data.user_id,
+                exp.company or '',
+                exp.role or '',
+                exp.from or '',
+                exp.to or '',
+                exp.description or ''
+            }, update_ops)
+        end
+    end
+
+    -- Update languages
+    if data.languages then
+        for _, lang in ipairs(data.languages) do
+            local lang_id = lang.language_id or get_next_id('languages')
+            local update_ops = {}
+            if lang.language and lang.language ~= "" then
+                table.insert(update_ops, { '=', 3, lang.language })
+            end
+            box.space.languages:upsert({
+                lang_id,
+                data.user_id,
+                lang.language or ''
+            }, update_ops)
+        end
+    end
+
+    return utils.raw_response({
+        status = 200,
+        message = "User information updated successfully"
+
+    })
 end
 
 -- Вызываем функции инициализации
