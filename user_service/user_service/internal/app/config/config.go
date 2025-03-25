@@ -11,6 +11,7 @@ type UserService struct {
 		User     string `yaml:"user" env:"DB_USER"`
 		Password string `yaml:"password" env:"DB_PASSWORD"`
 		Name     string `yaml:"name" env:"DB_NAME"`
+		Host     string `yaml:"host" env:"DB_HOST" default:"localhost"`
 	} `yaml:"database"`
 
 	HTTP struct {

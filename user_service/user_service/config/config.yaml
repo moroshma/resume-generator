@@ -1,7 +1,8 @@
 database:
-  user: postgres
-  password: 1234
+  user: user_service
+  password: gopassword
   name: users_db
+  host: 127.0.0.1:3301
 
 http:
   host: localhost

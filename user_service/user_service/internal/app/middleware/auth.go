@@ -10,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type claimsWithRoles struct {
+type claims struct {
 	jwt.RegisteredClaims
 }
 
@@ -53,10 +53,10 @@ func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
 		return cookie.Value, nil
 	}
 
-	return "", errors.New("Unexpected error")
+	return "", errors.New("unexpected error")
 }
 
-func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
+func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			refreshToken, err := r.Cookie("Refresh-Token")
@@ -94,19 +94,7 @@ func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
 				tokenString = authCookie.Value
 			}
 
-			tokenString = strings.TrimPrefix(tokenString, "Bearer ")
-
-			token, err := jwt.ParseWithClaims(tokenString, &claimsWithRoles{}, func(token *jwt.Token) (interface{}, error) {
-				return SECRET, nil
-			})
-			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			claims := token.Claims.(*claimsWithRoles)
-			_ = claims
-			http.Error(w, "You do not have the necessary permissions", http.StatusUnauthorized)
+			next.ServeHTTP(w, r)
 		})
 	}
 }
@@ -114,14 +102,14 @@ func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
 func GetUserIDByAccessToken(accessToken string) (uint, error) {
 	accessToken = strings.TrimPrefix(accessToken, "Bearer ")
 
-	token, err := jwt.ParseWithClaims(accessToken, &claimsWithRoles{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &claims{}, func(token *jwt.Token) (interface{}, error) {
 		return SECRET, nil
 	})
 	if err != nil {
 		return 0, err
 	}
 
-	claims := token.Claims.(*claimsWithRoles)
+	claims := token.Claims.(*claims)
 	userID, err := strconv.ParseUint(claims.RegisteredClaims.Subject, 10, 64)
 	return uint(userID), err
 }

@@ -23,22 +23,19 @@ func (uc *userUseCase) CreateUser(user models.User) (uint, error) {
 	return uc.userRepository.CreateUser(user)
 }
 
-func (uc *userUseCase) CreateUserInfo(info models.UserInfo) (uint, error) {
-	//TODO implement me
-	panic("implement me")
+func (uc *userUseCase) CreateUserInfo(info models.UserInfo) error {
+
+	return uc.userRepository.CreateUserInfo(info)
 }
 
-func (uc *userUseCase) UpdateUserInfo(u2 uint, info models.UserInfo) error {
-	//TODO implement me
-	panic("implement me")
+func (uc *userUseCase) UpdateUserInfo(userID uint, info models.UserInfo) error {
+	info.UserID = userID
+
+	return uc.userRepository.UpdateUserInfo(info)
 }
 
 func (uc *userUseCase) GetUserInfo(id uint) (models.UserInfo, error) {
 	return uc.userRepository.GetUserInfo(id)
-}
-
-func (uc *userUseCase) Create(user models.User) (uint, error) {
-	panic("implement me")
 }
 
 func (uc *userUseCase) Authenticate(user models.User) (models.User, error) {
