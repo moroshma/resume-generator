@@ -57,7 +57,7 @@ local function create_spaces()
         if_not_exists = true,
     })
     education:format({
-        { name = 'id', type = 'unsigned' },
+        { name = 'education_id', type = 'unsigned' },
         { name = 'user_id', type = 'unsigned' },
         { name = 'institution', type = 'string' },
         { name = 'degree', type = 'string' },
@@ -66,7 +66,7 @@ local function create_spaces()
     })
     education:create_index('primary', {
         type = 'hash',
-        parts = { 'id' },
+        parts = { 'education_id' },
         if_not_exists = true
     })
     education:create_index('user_id', {
@@ -81,7 +81,7 @@ local function create_spaces()
         if_not_exists = true,
     })
     experience:format({
-        { name = 'id', type = 'unsigned' },
+        { name = 'experience_id', type = 'unsigned' },
         { name = 'user_id', type = 'unsigned' },
         { name = 'company', type = 'string' },
         { name = 'role', type = 'string' },
@@ -91,7 +91,7 @@ local function create_spaces()
     })
     experience:create_index('primary', {
         type = 'hash',
-        parts = { 'id' },
+        parts = { 'experience_id' },
         if_not_exists = true
     })
     experience:create_index('user_id', {
@@ -106,13 +106,13 @@ local function create_spaces()
         if_not_exists = true,
     })
     languages:format({
-        { name = 'id', type = 'unsigned' },
+        { name = 'language_id', type = 'unsigned' },
         { name = 'user_id', type = 'unsigned' },
         { name = 'language', type = 'string' }
     })
     languages:create_index('primary', {
         type = 'hash',
-        parts = { 'id' },
+        parts = { 'language_id' },
         if_not_exists = true
     })
     languages:create_index('user_id', {
