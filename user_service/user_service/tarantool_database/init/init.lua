@@ -392,11 +392,8 @@ function update_user_info(info)
         end
     end
 
-
-
-
     if #updates == 0 then
-        return utils.raw_response( {error = "No fields to update" })
+        return utils.raw_response({ error = "No fields to update" })
     end
 
     user_info_space:update(data.user_id, updates)
