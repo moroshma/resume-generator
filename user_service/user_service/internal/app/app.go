@@ -29,6 +29,8 @@ func Run() {
 	}
 
 	r := chi.NewRouter()
+	// add recovery middleware to catch panics
+	r.Use(middleware.RecoverMiddleware())
 	r.Use(middleware.CORSMiddleware())
 
 	//dbName := cfg.Database.Name
