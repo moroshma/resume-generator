@@ -15,4 +15,15 @@ services:
       driver: "json-file"
       options:
         max-size: "200k"
-        max-file: "10" 
+        max-file: "10"
+
+  user-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8099:8099"
+    environment:
+      - DB_HOST=tarantool:3301
+    depends_on:
+      - tarantool

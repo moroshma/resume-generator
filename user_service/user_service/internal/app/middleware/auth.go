@@ -3,6 +3,7 @@ package middleware
 import (
 	"errors"
 	"fmt"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/token/usecase"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,7 +29,7 @@ func findCookieByName(cookies []*http.Cookie, name string) *http.Cookie {
 }
 
 func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
-	req, err := http.NewRequest("GET", "http://gateway/token", nil)
+	req, err := http.NewRequest("GET", "http://gateway/refresh", nil)
 	if err != nil {
 		return "", err
 	}
@@ -76,7 +77,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 			authCookie, err := r.Cookie("Authorization")
 			var tokenString string
 
-			if err == http.ErrNoCookie {
+			if errors.Is(err, http.ErrNoCookie) {
 				tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
 				if err != nil {
 					http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -90,9 +91,47 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 					HttpOnly: true,
 					MaxAge:   31536000,
 				})
-			} else {
-				tokenString = authCookie.Value
+				next.ServeHTTP(w, r)
 			}
+
+			tokenString = authCookie.Value
+			parsedToken, err := jwt.ParseWithClaims(tokenString, &claims{}, func(token *jwt.Token) (interface{}, error) {
+				return SECRET, nil
+			})
+			if err != nil || !parsedToken.Valid {
+				tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
+				if err != nil {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    tokenString,
+					Path:     "/",
+					HttpOnly: true,
+					MaxAge:   31536000,
+				})
+			}
+
+			userID, err := GetUserIDByAccessToken(tokenString)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			newRefreshToken, err := usecase.NewTokenUseCase().GenerateRefreshTokenByUserID(userID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "Refresh-Token",
+				Value:    newRefreshToken,
+				Path:     "/",
+				HttpOnly: true,
+			})
 
 			next.ServeHTTP(w, r)
 		})
