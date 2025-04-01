@@ -1,0 +1,16 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  user-service:
+    build:
+      context: . # Use current directory as build context (adjust if Dockerfile is elsewhere)
+      # dockerfile: ./path/to/your/Dockerfile # Uncomment and adjust if Dockerfile isn't named 'Dockerfile' or is in a subdir
+    container_name: my_user_service
+    ports:
+      - "8066:8066" # Map host port 8099 to container port 8099
+    # volumes: # Optional: Mount config if it's not baked into the image
+    #   - ./config:/app/config
+    # environment: # Optional: Add any environment variables needed
+    #   - SOME_VARIABLE=some_value
+    restart: unless-stopped

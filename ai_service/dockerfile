@@ -1,0 +1,66 @@
+# Dockerfile
+
+# --- Stage 1: Base Image ---
+# Use an official Python runtime as a parent image.
+# Choose a specific version (e.g., 3.11) for consistency.
+# The "-slim" variant is smaller than the full image.
+FROM python:3.11-slim as base
+
+# --- Set Environment Variables ---
+# Prevents Python from writing pyc files to disc (optional, slightly faster).
+ENV PYTHONDONTWRITEBYTECODE 1
+# Prevents Python from buffering stdout and stderr (important for logs).
+ENV PYTHONUNBUFFERED 1
+
+# --- Set Working Directory ---
+# Sets the working directory in the container. All subsequent commands (COPY, RUN, CMD)
+# will be relative to this directory. `/app` is a common convention.
+WORKDIR /app
+
+# --- Install System Dependencies (if any) ---
+# If your Python packages need system libraries (like for database drivers or image processing),
+# install them here using apt-get. For this specific service, it seems unlikely you need extra ones.
+# Example: RUN apt-get update && apt-get install -y --no-install-recommends some-package && rm -rf /var/lib/apt/lists/*
+
+# --- Install Python Dependencies ---
+# First, copy only the requirements file.
+# This takes advantage of Docker's layer caching. If requirements.txt doesn't change,
+# Docker can reuse the cached layer from a previous build, speeding things up significantly.
+COPY requirements.txt .
+
+# Install the Python dependencies specified in requirements.txt.
+# --no-cache-dir: Disables the pip cache, reducing image size slightly.
+# --upgrade pip: Ensures the latest version of pip is used.
+# -r requirements.txt: Installs packages from the file.
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# --- Copy Application Code ---
+# Copy the rest of your application code from your local machine (the build context)
+# into the working directory (`/app`) inside the container.
+# The first '.' refers to the current directory on your host machine (where you run `docker build`).
+# The second '.' refers to the current WORKDIR inside the container (`/app`).
+COPY . .
+# This will copy main.py, config.py, and the ai_service directory structure (routers, schemas, services)
+# into /app in the container.
+
+# --- Expose Port ---
+# Informs Docker that the container will listen on the specified network port at runtime.
+# Uvicorn defaults to port 8000. This does NOT publish the port; it's documentation/metadata.
+# Port publishing happens during `docker run` or in docker-compose.yml.
+EXPOSE 8000
+
+# --- Define Runtime Command ---
+# Specifies the command to run when a container is started from this image.
+# Use the list format ["executable", "param1", "param2", ...].
+# - "uvicorn": The ASGI server used to run FastAPI applications.
+# - "main:app": Tells uvicorn to find the FastAPI instance named `app` inside the file `main.py`.
+# - "--host", "0.0.0.0": Makes the server listen on all available network interfaces within the container.
+#   This is CRUCIAL for accessing the server from outside the container (via mapped ports).
+#   Using "127.0.0.1" or "localhost" would NOT work.
+# - "--port", "8000": Tells uvicorn to listen on port 8000 (matching the EXPOSE instruction).
+#
+# NOTE: For production, you might want to remove "--reload" (if added for development)
+# and potentially add "--workers" for better performance, e.g.,
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
