@@ -2,8 +2,9 @@ package http
 
 import (
 	"encoding/json"
+	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
@@ -16,11 +17,11 @@ type userHandlers struct {
 func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 	handlers := &userHandlers{userUsecase}
 
-	r.Route("/api/v001/users", func(r chi.Router) {
-		r.Route("/info", func(r chi.Router) {
-			r.Get("/", handlers.getInfo)
-			r.Put("/", handlers.updateUserInfo)
-			r.Post("/", handlers.createUserInfo)
+	r.Route("/api/v001", func(r chi.Router) {
+		r.Route("/users", func(r chi.Router) {
+			r.With(middleware.AuthMiddleware()).Get("/info", handlers.getInfo)
+			r.Put("/info", handlers.updateUserInfo)
+			r.Post("/info", handlers.createUserInfo)
 		})
 	})
 }
@@ -35,16 +36,27 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 // @Success 200 {object} models.User "User object"
 // @Failure 400 {string} string "Bad Request"
 // @Failure 401 {string} string "Unauthorized"
-// @Router /users/info [getInfo]
+// @Router /api/v001/users/info [get]
 func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
-	user, err := handlers.userUseCase.GetUserInfo(1)
+	tokenCookie, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
+		return
+	}
+	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
+	id, err := middleware.GetUserIDByAccessToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	user, err := handlers.userUseCase.GetUserInfo(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
 	res, err := json.Marshal(user)
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -66,12 +78,18 @@ func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {string} string "Bad Request"
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal Server Error"
-// @Router /users/{id} [put]
+// @Router /api/v001/users/info [put]
 func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.ParseUint(idParam, 10, 64)
+	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
+	id, err := middleware.GetUserIDByAccessToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -82,7 +100,7 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = handlers.userUseCase.UpdateUserInfo(uint(id), user)
+	err = handlers.userUseCase.UpdateUserInfo(id, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -91,6 +109,44 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 }
 
+// createUserInfo creates a new user info entry.
+// @Summary Create a new user info
+// @Description Creates a new user info entry for the authenticated user.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.UserInfo true "User info details"
+// @Success 200 {string} string "OK"
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/v001/users/info [post]
 func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Request) {
-	panic("implement me")
+	tokenCookie, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
+		return
+	}
+	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
+	id, err := middleware.GetUserIDByAccessToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	var user models.UserInfo
+	err = json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	user.UserID = id
+
+	err = handlers.userUseCase.CreateUserInfo(user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

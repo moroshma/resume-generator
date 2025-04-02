@@ -1,7 +1,6 @@
 package auth_middleware
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,7 +13,7 @@ import (
 
 type claimsWithRoles struct {
 	jwt.RegisteredClaims
-	Roles json.RawMessage `json:"roles"`
+	UserID string `json:"user_id"`
 }
 
 var SECRET = []byte("private-key")
@@ -23,7 +22,7 @@ var client http.Client
 
 func findCookieByName(cookies []*http.Cookie, name string) *http.Cookie {
 	for _, cookie := range cookies {
-		if cookie.Name == "Authorization" {
+		if cookie.Name == name {
 			return cookie
 		}
 	}
@@ -78,7 +77,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString, err := c.Cookie("Authorization")
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			tokenString, err = getAccessTokenByRefreshToken(refreshToken)
 			if err != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -97,22 +96,11 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-		token, err := jwt.ParseWithClaims(tokenString, &claimsWithRoles{}, func(token *jwt.Token) (interface{}, error) {
+		_, err = jwt.ParseWithClaims(tokenString, &claimsWithRoles{}, func(token *jwt.Token) (interface{}, error) {
 			return SECRET, nil
 		})
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			c.Abort()
-			return
-		}
-
-		claims := token.Claims.(*claimsWithRoles)
-
-		var claimsRoles []string
-
-		err = json.Unmarshal(claims.Roles, &claimsRoles)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}

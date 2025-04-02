@@ -3,6 +3,7 @@ package middleware
 import (
 	"errors"
 	"fmt"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/token/usecase"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type claimsWithRoles struct {
+type claims struct {
 	jwt.RegisteredClaims
 }
 
@@ -28,7 +29,7 @@ func findCookieByName(cookies []*http.Cookie, name string) *http.Cookie {
 }
 
 func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
-	req, err := http.NewRequest("GET", "http://gateway/token", nil)
+	req, err := http.NewRequest("GET", "http://gateway/refresh", nil)
 	if err != nil {
 		return "", err
 	}
@@ -53,10 +54,10 @@ func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
 		return cookie.Value, nil
 	}
 
-	return "", errors.New("Unexpected error")
+	return "", errors.New("unexpected error")
 }
 
-func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
+func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			refreshToken, err := r.Cookie("Refresh-Token")
@@ -76,7 +77,7 @@ func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
 			authCookie, err := r.Cookie("Authorization")
 			var tokenString string
 
-			if err == http.ErrNoCookie {
+			if errors.Is(err, http.ErrNoCookie) {
 				tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
 				if err != nil {
 					http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -90,23 +91,49 @@ func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
 					HttpOnly: true,
 					MaxAge:   31536000,
 				})
-			} else {
-				tokenString = authCookie.Value
+				next.ServeHTTP(w, r)
 			}
 
-			tokenString = strings.TrimPrefix(tokenString, "Bearer ")
-
-			token, err := jwt.ParseWithClaims(tokenString, &claimsWithRoles{}, func(token *jwt.Token) (interface{}, error) {
+			tokenString = authCookie.Value
+			parsedToken, err := jwt.ParseWithClaims(tokenString, &claims{}, func(token *jwt.Token) (interface{}, error) {
 				return SECRET, nil
 			})
+			if err != nil || !parsedToken.Valid {
+				tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
+				if err != nil {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+
+				http.SetCookie(w, &http.Cookie{
+					Name:     "Authorization",
+					Value:    tokenString,
+					Path:     "/",
+					HttpOnly: true,
+					MaxAge:   31536000,
+				})
+			}
+
+			userID, err := GetUserIDByAccessToken(tokenString)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			claims := token.Claims.(*claimsWithRoles)
-			_ = claims
-			http.Error(w, "You do not have the necessary permissions", http.StatusUnauthorized)
+			newRefreshToken, err := usecase.NewTokenUseCase().GenerateRefreshTokenByUserID(userID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "Refresh-Token",
+				Value:    newRefreshToken,
+				Path:     "/",
+				HttpOnly: true,
+			})
+
+			next.ServeHTTP(w, r)
 		})
 	}
 }
@@ -114,14 +141,14 @@ func AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
 func GetUserIDByAccessToken(accessToken string) (uint, error) {
 	accessToken = strings.TrimPrefix(accessToken, "Bearer ")
 
-	token, err := jwt.ParseWithClaims(accessToken, &claimsWithRoles{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &claims{}, func(token *jwt.Token) (interface{}, error) {
 		return SECRET, nil
 	})
 	if err != nil {
 		return 0, err
 	}
 
-	claims := token.Claims.(*claimsWithRoles)
+	claims := token.Claims.(*claims)
 	userID, err := strconv.ParseUint(claims.RegisteredClaims.Subject, 10, 64)
 	return uint(userID), err
 }

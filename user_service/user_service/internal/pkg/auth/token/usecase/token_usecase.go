@@ -9,15 +9,15 @@ import (
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 )
 
-type tokenUsecase struct{}
+type tokenUseCase struct{}
 
-func NewTokenUsecase() models.TokenUsecaseI {
-	return &tokenUsecase{}
+func NewTokenUseCase() models.TokenUsecaseI {
+	return &tokenUseCase{}
 }
 
 var SECRET = []byte("private-key")
 
-func (uc *tokenUsecase) GenerateRefreshTokenByUserID(id uint) (string, error) {
+func (uc *tokenUseCase) GenerateRefreshTokenByUserID(id uint) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Subject:   strconv.Itoa(int(id)),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(8760 * time.Hour)),
@@ -27,7 +27,7 @@ func (uc *tokenUsecase) GenerateRefreshTokenByUserID(id uint) (string, error) {
 	return tokenString, err
 }
 
-func (uc *tokenUsecase) GenerateAccessTokenByUserIDRoles(id uint) (string, error) {
+func (uc *tokenUseCase) GenerateAccessTokenByUserID(id uint) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, models.ClaimsWithRoles{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.Itoa(int(id)),
@@ -39,7 +39,7 @@ func (uc *tokenUsecase) GenerateAccessTokenByUserIDRoles(id uint) (string, error
 	return tokenString, err
 }
 
-func (uc *tokenUsecase) GetUserIDByRefreshToken(refreshToken string) (uint, error) {
+func (uc *tokenUseCase) GetUserIDByRefreshToken(refreshToken string) (uint, error) {
 	token, err := jwt.ParseWithClaims(refreshToken, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return SECRET, nil
 	})

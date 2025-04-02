@@ -48,7 +48,7 @@ COPY . .
 # Informs Docker that the container will listen on the specified network port at runtime.
 # Uvicorn defaults to port 8000. This does NOT publish the port; it's documentation/metadata.
 # Port publishing happens during `docker run` or in docker-compose.yml.
-EXPOSE 8000
+EXPOSE 8066
 
 # --- Define Runtime Command ---
 # Specifies the command to run when a container is started from this image.
@@ -58,9 +58,9 @@ EXPOSE 8000
 # - "--host", "0.0.0.0": Makes the server listen on all available network interfaces within the container.
 #   This is CRUCIAL for accessing the server from outside the container (via mapped ports).
 #   Using "127.0.0.1" or "localhost" would NOT work.
-# - "--port", "8000": Tells uvicorn to listen on port 8000 (matching the EXPOSE instruction).
+# - "--port", "8000": Tells uvicorn to listen on port 8066 (matching the EXPOSE instruction).
 #
 # NOTE: For production, you might want to remove "--reload" (if added for development)
 # and potentially add "--workers" for better performance, e.g.,
-# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8066", "--workers", "4"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8066"]

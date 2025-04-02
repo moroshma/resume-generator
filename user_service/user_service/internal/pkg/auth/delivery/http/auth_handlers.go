@@ -11,8 +11,8 @@ import (
 )
 
 type authHandlers struct {
-	userUsecase  models.UserUseCaseI
-	tokenUsecase models.TokenUsecaseI
+	userUseCase  models.UserUseCaseI
+	tokenUseCase models.TokenUsecaseI
 }
 
 func NewAuthHandlers(r *chi.Mux,
@@ -20,12 +20,12 @@ func NewAuthHandlers(r *chi.Mux,
 	tokenUseCase models.TokenUsecaseI) {
 	handlers := authHandlers{userUseCase, tokenUseCase}
 
-	r.Get("/token", handlers.generateAccessTokenByRefreshToken)
-	r.Route("/auth", func(r chi.Router) {
+	r.Route("/api/v001/auth", func(r chi.Router) {
+		r.Get("/refresh", handlers.generateAccessTokenByRefreshToken)
 		r.Post("/register", handlers.register)
 		r.Post("/login", handlers.logIn)
-		r.With(middleware.AuthMiddleware("user", "admin")).Delete("/logout", handlers.logOut)
-		r.With(middleware.AuthMiddleware("user", "admin")).Get("/check", handlers.authCheck)
+		r.With(middleware.AuthMiddleware()).Delete("/logout", handlers.logOut)
+		r.With(middleware.AuthMiddleware()).Get("/check", handlers.authCheck)
 	})
 }
 
@@ -37,7 +37,7 @@ func NewAuthHandlers(r *chi.Mux,
 // @Param user body models.User true "User registration details"
 // @Success 201 {object} models.User "User registered successfully"
 // @Failure 400 {string} string "Bad Request"
-// @Router /auth/register [post]
+// @Router /api/v001/auth/register [post]
 func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -46,7 +46,7 @@ func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	generatedID, err := handlers.userUsecase.CreateUser(user)
+	generatedID, err := handlers.userUseCase.CreateUser(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -66,7 +66,7 @@ func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {string} string "Login successful"
 // @Failure 400 {string} string "Bad Request"
 // @Failure 401 {string} string "Unauthorized"
-// @Router /auth/login [post]
+// @Router /api/v001/auth/login [post]
 func (handlers *authHandlers) logIn(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -75,13 +75,13 @@ func (handlers *authHandlers) logIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authUser, err := handlers.userUsecase.Authenticate(user)
+	authUser, err := handlers.userUseCase.Authenticate(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	refreshToken, err := handlers.tokenUsecase.GenerateRefreshTokenByUserID(authUser.ID)
+	refreshToken, err := handlers.tokenUseCase.GenerateRefreshTokenByUserID(authUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -94,12 +94,7 @@ func (handlers *authHandlers) logIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(authUser.ID)
+	accessToken, err := handlers.tokenUseCase.GenerateAccessTokenByUserID(authUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -120,7 +115,7 @@ func (handlers *authHandlers) logIn(w http.ResponseWriter, r *http.Request) {
 // @Description Logs out a user by clearing access and refresh tokens.
 // @Tags Authentication
 // @Success 200 {string} string "Logout successful"
-// @Router /auth/logout [delete]
+// @Router /api/v001/auth/logout [delete]
 func (handlers *authHandlers) logOut(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "Refresh-Token",
@@ -145,7 +140,7 @@ func (handlers *authHandlers) logOut(w http.ResponseWriter, r *http.Request) {
 // @Tags Authentication
 // @Success 200 {string} string "Access token generated successfully"
 // @Failure 401 {string} string "Unauthorized"
-// @Router /token [get]
+// @Router /api/v001/token [get]
 func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseWriter, r *http.Request) {
 	refreshTokenCookie, err := r.Cookie("Refresh-Token")
 	if err != nil {
@@ -155,13 +150,13 @@ func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseW
 
 	refreshToken := refreshTokenCookie.Value
 
-	userID, err := handlers.tokenUsecase.GetUserIDByRefreshToken(refreshToken)
+	userID, err := handlers.tokenUseCase.GetUserIDByRefreshToken(refreshToken)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	accessToken, err := handlers.tokenUsecase.GenerateAccessTokenByUserIDRoles(userID)
+	accessToken, err := handlers.tokenUseCase.GenerateAccessTokenByUserID(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -170,6 +165,20 @@ func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseW
 	http.SetCookie(w, &http.Cookie{
 		Name:     "Authorization",
 		Value:    fmt.Sprintf("Bearer %s", accessToken),
+		Path:     "/",
+		HttpOnly: true,
+	})
+
+	refreshToken, err = handlers.tokenUseCase.GenerateRefreshTokenByUserID(userID)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "Refresh-Token",
+		Value:    refreshToken,
 		Path:     "/",
 		HttpOnly: true,
 	})
