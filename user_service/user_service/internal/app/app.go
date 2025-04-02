@@ -53,10 +53,18 @@ func Run() {
 		Notify:        make(chan tarantool.ConnEvent, 10),
 	}
 
-	// Establish the connection
-	conn, err := tarantool.Connect(context.Background(), dialer, opts)
+	var conn *tarantool.Connection
+	for i := 0; i < 5; i++ {
+		conn, err = tarantool.Connect(context.Background(), dialer, opts)
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to connect: %s. Retrying in 1 second...", err)
+		time.Sleep(1 * time.Second)
+	}
+
 	if err != nil {
-		log.Fatalf("Failed to connect: %s", err)
+		log.Fatalf("Failed to connect after 5 attempts: %s", err)
 	}
 
 	defer conn.Close()
