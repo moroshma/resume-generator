@@ -2,7 +2,7 @@ database:
   user: user_service
   password: gopassword
   name: users_db
-  host: tarantool:3301
+  host: localhost:3301
 
 http:
   host: 0.0.0.0
