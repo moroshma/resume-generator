@@ -2,13 +2,11 @@ package middleware
 
 import (
 	"net/http"
-	"time"
 )
 
+var client = http.Client{}
+
 func AuthMiddleware() func(http.Handler) http.Handler {
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			refreshToken, err := r.Cookie("Refresh-Token")
@@ -60,7 +58,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 				}
 			}
 
-			if refreshToken.Value != respRefreshCookie {
+			if refreshToken.Value != respRefreshCookie && respAccessCookie != "" {
 				http.SetCookie(w, &http.Cookie{
 					Name:     "Refresh-Token",
 					Value:    respRefreshCookie,
