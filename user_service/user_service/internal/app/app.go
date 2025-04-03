@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	chi_middelware "github.com/go-chi/chi/v5/middleware"
 	"github.com/moroshma/resume-generator/user_service/internal/app/config"
 	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
 	auth_handlers "github.com/moroshma/resume-generator/user_service/internal/pkg/auth/delivery/http"
@@ -32,6 +33,7 @@ func Run() {
 	// add recovery middleware to catch panics
 	r.Use(middleware.RecoverMiddleware())
 	r.Use(middleware.CORSMiddleware())
+	r.Use(chi_middelware.Logger)
 
 	//dbName := cfg.Database.Name
 	dbUser := cfg.Database.User

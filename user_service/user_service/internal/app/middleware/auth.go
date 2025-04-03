@@ -56,7 +56,6 @@ func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
 
 	return "", errors.New("unexpected error")
 }
-
 func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -91,27 +90,27 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 					HttpOnly: true,
 					MaxAge:   31536000,
 				})
-				next.ServeHTTP(w, r)
-			}
+			} else {
+				tokenString = strings.TrimPrefix(authCookie.Value, "Bearer ")
 
-			tokenString = authCookie.Value
-			parsedToken, err := jwt.ParseWithClaims(tokenString, &claims{}, func(token *jwt.Token) (interface{}, error) {
-				return SECRET, nil
-			})
-			if err != nil || !parsedToken.Valid {
-				tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
-				if err != nil {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
-					return
-				}
-
-				http.SetCookie(w, &http.Cookie{
-					Name:     "Authorization",
-					Value:    tokenString,
-					Path:     "/",
-					HttpOnly: true,
-					MaxAge:   31536000,
+				parsedToken, err := jwt.ParseWithClaims(tokenString, &claims{}, func(token *jwt.Token) (interface{}, error) {
+					return SECRET, nil
 				})
+				if err != nil || !parsedToken.Valid {
+					tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
+					if err != nil {
+						http.Error(w, "Unauthorized", http.StatusUnauthorized)
+						return
+					}
+
+					http.SetCookie(w, &http.Cookie{
+						Name:     "Authorization",
+						Value:    tokenString,
+						Path:     "/",
+						HttpOnly: true,
+						MaxAge:   31536000,
+					})
+				}
 			}
 
 			userID, err := GetUserIDByAccessToken(tokenString)
@@ -137,7 +136,6 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 		})
 	}
 }
-
 func GetUserIDByAccessToken(accessToken string) (uint, error) {
 	accessToken = strings.TrimPrefix(accessToken, "Bearer ")
 

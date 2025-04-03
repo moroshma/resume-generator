@@ -2,7 +2,9 @@ package resume_handlers
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	"github.com/moroshma/resume-generator/resume_storage/internal/app/middleware"
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/models"
 	"github.com/moroshma/resume-generator/user_service/pkg/auth_middleware"
 	"github.com/sirupsen/logrus"
@@ -30,7 +32,7 @@ func NewResumeHandler(resumeUseCase ResumeUseCase) *ResumeHandler {
 
 func NewResumeRoutes(r *chi.Mux, resumeUseCase ResumeUseCase) {
 	resumeHandler := NewResumeHandler(resumeUseCase)
-	r.Route("/api/v001/user", func(r chi.Router) {
+	r.With(middleware.AuthMiddleware()).Route("/api/v001/user", func(r chi.Router) {
 		r.Post("/resume", resumeHandler.CreateResume)
 		r.Delete("/resume/{id}", resumeHandler.DeleteResumeByID)
 		r.Get("/resume/{id}", resumeHandler.GetResumeByID)
@@ -131,9 +133,68 @@ func (h *ResumeHandler) GetResumeByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ResumeHandler) GetResumeInfoListByUserID(w http.ResponseWriter, r *http.Request) {
+	authToken, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 
+	if authToken == nil || authToken.Value == "" {
+		http.Error(w, "Auth error: empty token", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := auth_middleware.GetUserIDByAccessToken(authToken.Value)
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	resumes, err := h.resumeUseCase.GetResumeInfoListByUserID(context.Background(), userID)
+	if err != nil {
+		logrus.Errorf("Error get resume list: %v\n", err)
+		http.Error(w, "Error get resume list", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resumes); err != nil {
+		logrus.Errorf("Error encode resume list: %v\n", err)
+		http.Error(w, "Error encode resume list", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *ResumeHandler) DeleteResumeByID(w http.ResponseWriter, r *http.Request) {
+	authToken, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+	if authToken == nil || authToken.Value == "" {
+		http.Error(w, "Auth error: empty token", http.StatusUnauthorized)
+		return
+	}
+	userID, err := auth_middleware.GetUserIDByAccessToken(authToken.Value)
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 
+	resumeIDQuery := chi.URLParam(r, "id")
+	resumeID, err := strconv.Atoi(resumeIDQuery)
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	err = h.resumeUseCase.DeleteResumeByID(context.Background(), userID, uint(resumeID))
+	if err != nil {
+		logrus.Errorf("Error delete resume: %v\n", err)
+		http.Error(w, "Error delete resume", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
