@@ -7,6 +7,8 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+const bucketName = "users-resume-pdf"
+
 type MinioProvider struct {
 	minioAuthData
 	client *minio.Client

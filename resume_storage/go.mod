@@ -7,7 +7,10 @@ require (
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/minio/minio-go/v7 v7.0.89
 	github.com/sirupsen/logrus v1.9.3
+	github.com/moroshma/resume-generator/user_service v0.0.1
 )
+
+replace github.com/moroshma/resume-generator/user_service => ../user_service/user_service
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

@@ -1,16 +1,12 @@
 package models
 
 import (
+	"context"
 	"io"
 	"time"
 )
 
-type User struct {
-	ID uint
-}
-
 type Resume struct {
-	User
 	Payload     io.Reader
 	PayloadName string
 	PayloadSize int64
@@ -23,24 +19,8 @@ type ResumeInfo struct {
 	Title     string    `json:"title"`
 }
 
-type ResumeRepositoryI interface {
-	CreateResume(resume Resume) (uint, error)
-	DeleteResumeByID(resumeID uint) error
-	GetResumeInfoByID(resumeID uint) (ResumeInfo, error)
-	GetAllResumesPreview() ([]ResumeInfo, error)
-	GetResumeByID(resumeID uint) (Resume, error)
-}
-
-type ResumeUseCaseI interface {
-	CreateResume(resume Resume) (uint, error)
-	DeleteResumeByID(resumeID uint) error
-	GetResumeInfoByID(resumeID uint) (ResumeInfo, error)
-	GetAllResumesPreview() ([]ResumeInfo, error)
-	GetResumeByID(resumeID uint) (Resume, error)
-}
-
 type ResumePdfStorageI interface {
-	UploadFile(object Resume) (string, error)
-	DownloadFile(objectName string) (Resume, error)
-	DeleteFile(userID, payloadID uint) (string, error)
+	UploadFile(ctx context.Context, object Resume, objectName string) error
+	DownloadFile(ctx context.Context, objectName string) (Resume, error)
+	DeleteFile(ctx context.Context, objectName string) (string, error)
 }

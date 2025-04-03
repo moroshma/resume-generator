@@ -15,11 +15,62 @@ func NewPostgresProvider(db *pgxpool.Pool) (*postgresProvider, error) {
 	return &postgresProvider{db: db}, nil
 }
 
-func (p *postgresProvider) CreateNewResume(ctx context.Context, resume models.Resume) (uint, error) {
+func (p *postgresProvider) DeleteResumeByID(ctx context.Context, userID, resumeID uint) error {
+	rd, err := p.db.Exec(ctx,
+		"delete from resume where resume_id = $1 and user_id = $2",
+		resumeID, userID,
+	)
+	if err != nil {
+		return err
+	}
+	if rd.RowsAffected() == 0 {
+		return errors.New("resume not found")
+	}
+
+	return nil
+}
+
+func (p *postgresProvider) GetResumeInfoByID(ctx context.Context, userID, resumeID uint) (models.ResumeInfo, error) {
+	var resumeInfo models.ResumeInfo
+	err := p.db.QueryRow(ctx,
+		"select resume_id, user_id, created_at, title from resume where resume_id = $1 and user_id = $2",
+		resumeID, userID,
+	).Scan(&resumeInfo.ResumeID, &resumeInfo.UserID, &resumeInfo.CreatedAt, &resumeInfo.Title)
+	if err != nil {
+		return models.ResumeInfo{}, err
+	}
+
+	return resumeInfo, nil
+}
+
+func (p *postgresProvider) GetAllResumesPreview(ctx context.Context, userID uint) ([]models.ResumeInfo, error) {
+	var resumes []models.ResumeInfo
+	rows, err := p.db.Query(ctx,
+		"select resume_id, user_id, created_at, title from resume where user_id = $1",
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var resumeInfo models.ResumeInfo
+		err := rows.Scan(&resumeInfo.ResumeID, &resumeInfo.UserID, &resumeInfo.CreatedAt, &resumeInfo.Title)
+		if err != nil {
+			return nil, err
+		}
+		resumes = append(resumes, resumeInfo)
+	}
+
+	return resumes, nil
+}
+
+func (p *postgresProvider) CreateResume(ctx context.Context, userID uint, title string) (uint, error) {
 	var resumeID uint
 	err := p.db.QueryRow(ctx,
-		"insert into resume (user_id, payload_name, payload_size) values ($1, $2, $3) RETURNING resume_id;",
-		resume.User.ID, resume.PayloadName, resume.PayloadSize,
+		"insert into resume (user_id, title) values ($1, $2) returning resume_id",
+		userID, title,
 	).Scan(&resumeID)
 	if err != nil {
 		return 0, err
@@ -28,58 +79,11 @@ func (p *postgresProvider) CreateNewResume(ctx context.Context, resume models.Re
 	return resumeID, nil
 }
 
-func (p *postgresProvider) DeleteResumeByID(ctx context.Context, resumeID uint) error {
-	ct, err := p.db.Exec(ctx, "delete from resume where resume_id = $1", resumeID)
-	if err != nil {
-		return err
-	}
-	if ct.RowsAffected() == 0 {
-		return errors.New("resume not found")
-	}
-
-	return nil
-}
-
-func (p *postgresProvider) GetResumeInfoByID(ctx context.Context, resumeID uint) (models.ResumeInfo, error) {
-	var resume models.ResumeInfo
-	err := p.db.QueryRow(ctx,
-		"select resume_id, user_id, created_at, title from resume where resume_id = $1",
-		resumeID,
-	).Scan(&resume.ResumeID, &resume.UserID, &resume.CreatedAt, &resume.Title)
-	if err != nil {
-		return models.ResumeInfo{}, err
-	}
-
-	return resume, nil
-}
-
-func (p *postgresProvider) GetAllResumesPreview(ctx context.Context) ([]models.ResumeInfo, error) {
-	var resumes []models.ResumeInfo
-	rows, err := p.db.Query(ctx,
-		"select resume_id, user_id, created_at, title from resume",
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var resume models.ResumeInfo
-		err := rows.Scan(&resume.ResumeID, &resume.UserID, &resume.CreatedAt, &resume.Title)
-		if err != nil {
-			return nil, err
-		}
-		resumes = append(resumes, resume)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return resumes, nil
-}
-
-/*
- CreateNewResume - Создает новую запись резюме в базе данных
- DeleteResumeByID - Удаляет резюме по ID
- GetResumeByID - Получает резюме по ID
- GetAllResumesPreview - Получает все базовые поля всех резюме
+/* resume schema
+create table resume (
+    resume_id serial primary key,
+    user_id int not null,
+    created_at timestamp default now(),
+    title varchar(1024) not null
+);
 */

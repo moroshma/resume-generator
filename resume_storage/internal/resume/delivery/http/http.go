@@ -1,0 +1,144 @@
+package resume_handlers
+
+import (
+	"context"
+	"github.com/go-chi/chi/v5"
+	"github.com/moroshma/resume-generator/resume_storage/internal/resume/models"
+	"github.com/moroshma/resume-generator/user_service/pkg/auth_middleware"
+	"github.com/sirupsen/logrus"
+	"io"
+	"net/http"
+	"strconv"
+)
+
+type ResumeUseCase interface {
+	CreateResume(ctx context.Context, userID uint, title string, resumeObject models.Resume) error
+	GetResumeByID(ctx context.Context, userID, resumeID uint) (models.Resume, error)
+	GetResumeInfoListByUserID(ctx context.Context, userID uint) ([]models.ResumeInfo, error)
+	DeleteResumeByID(ctx context.Context, userID, resumeID uint) error
+}
+
+type ResumeHandler struct {
+	resumeUseCase ResumeUseCase
+}
+
+func NewResumeHandler(resumeUseCase ResumeUseCase) *ResumeHandler {
+	return &ResumeHandler{
+		resumeUseCase: resumeUseCase,
+	}
+}
+
+func NewResumeRoutes(r *chi.Mux, resumeUseCase ResumeUseCase) {
+	resumeHandler := NewResumeHandler(resumeUseCase)
+	r.Route("/api/v001/user", func(r chi.Router) {
+		r.Post("/resume", resumeHandler.CreateResume)
+		r.Delete("/resume/{id}", resumeHandler.DeleteResumeByID)
+		r.Get("/resume/{id}", resumeHandler.GetResumeByID)
+		r.Get("/resume/list", resumeHandler.GetResumeInfoListByUserID)
+	})
+}
+
+func (h *ResumeHandler) CreateResume(w http.ResponseWriter, r *http.Request) {
+	// Получаем заголовок Authorization
+	authToken, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if authToken == nil || authToken.Value == "" {
+		http.Error(w, "Auth error: empty token", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := auth_middleware.GetUserIDByAccessToken(authToken.Value)
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	title := r.URL.Query().Get("title")
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем файл из формы
+	src, hdr, err := r.FormFile("resume")
+	if err != nil {
+		http.Error(w, "Неверный запрос: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer src.Close()
+
+	resume := models.Resume{
+		Payload:     src,
+		PayloadName: hdr.Filename,
+		PayloadSize: hdr.Size,
+	}
+
+	err = h.resumeUseCase.CreateResume(context.Background(), userID, title, resume)
+	if err != nil {
+		logrus.Errorf("Error create resume: %v\n", err)
+		http.Error(w, "Error create resume", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *ResumeHandler) GetResumeByID(w http.ResponseWriter, r *http.Request) {
+	authToken, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if authToken == nil || authToken.Value == "" {
+		http.Error(w, "Auth error: empty token", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := auth_middleware.GetUserIDByAccessToken(authToken.Value)
+	if err != nil {
+		http.Error(w, "Auth error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+	resumeIDQuery := chi.URLParam(r, "id")
+
+	if resumeIDQuery == "" {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+	resumeID, err := strconv.Atoi(resumeIDQuery)
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	resume, err := h.resumeUseCase.GetResumeByID(context.Background(), userID, uint(resumeID))
+	if err != nil {
+		logrus.Errorf("Error get resume: %v\n", err)
+		http.Error(w, "Error get resume", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+
+	w.Header().Set("Content-Disposition", "inline; filename="+resume.PayloadName)
+	w.Header().Set("Content-Length", strconv.FormatInt(resume.PayloadSize, 10))
+	if _, err := io.Copy(w, resume.Payload); err != nil {
+		logrus.Errorf("Error send file to client: %v\n", err)
+		http.Error(w, "Error send file to client", http.StatusInternalServerError)
+		return
+	}
+	defer resume.Payload.(io.ReadCloser).Close()
+}
+
+func (h *ResumeHandler) GetResumeInfoListByUserID(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (h *ResumeHandler) DeleteResumeByID(w http.ResponseWriter, r *http.Request) {
+
+}

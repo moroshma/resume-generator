@@ -8,20 +8,17 @@ import (
 )
 
 // UploadFile - Отправляет файл в minio
-func (m *MinioProvider) UploadFile(ctx context.Context, object models.Resume) (string, error) {
-	// Создаем уникальное имя файла на основе ID пользователя
-	objectName := fmt.Sprintf("user_%d_%s", object.ID, object.PayloadName)
-
+func (m *MinioProvider) UploadFile(ctx context.Context, object models.Resume, objectName string) error {
 	_, err := m.client.PutObject(
 		ctx,
-		"users-resume-pdf", // Константа с именем бакета
+		bucketName,
 		objectName,
 		object.Payload,
 		object.PayloadSize,
 		minio.PutObjectOptions{ContentType: "application/pdf"},
 	)
 
-	return objectName, err
+	return err
 }
 
 // DownloadFile - Возвращает файл из minio
@@ -35,7 +32,7 @@ func (m *MinioProvider) DownloadFile(ctx context.Context, objectName string) (mo
 
 	reader, err := m.client.GetObject(
 		ctx,
-		"users-resume-pdf",
+		bucketName,
 		objectName,
 		minio.GetObjectOptions{},
 	)
@@ -62,18 +59,17 @@ func (m *MinioProvider) DownloadFile(ctx context.Context, objectName string) (mo
 }
 
 // DeleteFile - Удаляет файл из minio
-func (m *MinioProvider) DeleteFile(ctx context.Context, userID, payloadID uint) (string, error) {
-	// Создаем уникальное имя файла на основе ID пользователя
-	objectName := fmt.Sprintf("user_%d_%s", object.ID, object.PayloadName)
-
-	_, err := m.client.PutObject(
+func (m *MinioProvider) DeleteFile(ctx context.Context, objectName string) (string, error) {
+	err := m.client.RemoveObject(
 		ctx,
-		"users-resume-pdf", // Константа с именем бакета
+		bucketName,
 		objectName,
-		object.Payload,
-		object.PayloadSize,
-		minio.PutObjectOptions{ContentType: "application/pdf"},
+		minio.RemoveObjectOptions{},
 	)
 
-	return objectName, err
+	if err != nil {
+		return "", fmt.Errorf("err delete PDF: %w", err)
+	}
+
+	return objectName, nil
 }
