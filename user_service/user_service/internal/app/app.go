@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	chi_middelware "github.com/go-chi/chi/v5/middleware"
 	"github.com/moroshma/resume-generator/user_service/internal/app/config"
 	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
 	auth_handlers "github.com/moroshma/resume-generator/user_service/internal/pkg/auth/delivery/http"
@@ -32,6 +33,7 @@ func Run() {
 	// add recovery middleware to catch panics
 	r.Use(middleware.RecoverMiddleware())
 	r.Use(middleware.CORSMiddleware())
+	r.Use(chi_middelware.Logger)
 
 	//dbName := cfg.Database.Name
 	dbUser := cfg.Database.User
@@ -69,11 +71,6 @@ func Run() {
 
 	defer conn.Close()
 
-	// Выполняем пинг
-	if err := pingTarantool(conn); err != nil {
-		log.Fatalf("Ping failed: %s", err)
-	}
-
 	tokenUseCase := token_usecase.NewTokenUseCase()
 	userUseCase := user_usecase.NewUserUseCase(user_repository.NewTarantoolUserRepository(conn))
 
@@ -92,19 +89,4 @@ func Run() {
 		log.Fatalf("Error starting server: %v", err)
 		return
 	}
-}
-func pingTarantool(conn *tarantool.Connection) error {
-	// Создаем ping запрос
-	req := tarantool.NewPingRequest()
-
-	// Выполняем запрос
-	resp := conn.Do(req)
-
-	// Ждем ответ
-	_, err := resp.GetResponse()
-	if err != nil {
-		return fmt.Errorf("ping failed: %w", err)
-	}
-
-	return nil
 }

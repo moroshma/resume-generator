@@ -12,7 +12,7 @@
 
 ```json
 {
-  "email": "string",
+  "login": "string",
   "password": "string"
 }
 ```

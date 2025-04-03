@@ -10,9 +10,8 @@
 
 ```json
 {
-  "email": "string",
-  "password": "string",
-  "name": "string"
+  "login": "string",
+  "password": "string"
 }
 ```
 
