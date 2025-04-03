@@ -1,12 +1,12 @@
 database:
-  user: user_service
-  password: gopassword
-  name: users_db
-  host: localhost:3301
+  user: resume
+  password: generator
+  name: resume_db
+  host: localhost:5432
 
 http:
-  host: 0.0.0.0
-  port: '8099'
+  host: localhost
+  port: '8100'
 
 object_storage:
   host: localhost:9000

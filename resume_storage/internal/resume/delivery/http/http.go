@@ -57,12 +57,6 @@ func (h *ResumeHandler) CreateResume(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := r.URL.Query().Get("title")
-	if title == "" {
-		http.Error(w, "title is required", http.StatusBadRequest)
-		return
-	}
-
 	// Получаем файл из формы
 	src, hdr, err := r.FormFile("resume")
 	if err != nil {
@@ -77,7 +71,7 @@ func (h *ResumeHandler) CreateResume(w http.ResponseWriter, r *http.Request) {
 		PayloadSize: hdr.Size,
 	}
 
-	err = h.resumeUseCase.CreateResume(context.Background(), userID, title, resume)
+	err = h.resumeUseCase.CreateResume(context.Background(), userID, hdr.Filename, resume)
 	if err != nil {
 		logrus.Errorf("Error create resume: %v\n", err)
 		http.Error(w, "Error create resume", http.StatusInternalServerError)
@@ -110,6 +104,7 @@ func (h *ResumeHandler) GetResumeByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ID is required", http.StatusBadRequest)
 		return
 	}
+
 	resumeID, err := strconv.Atoi(resumeIDQuery)
 	if err != nil {
 		http.Error(w, "Invalid ID format", http.StatusBadRequest)

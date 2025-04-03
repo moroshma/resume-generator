@@ -24,7 +24,7 @@ func (m *MinioProvider) UploadFile(ctx context.Context, object models.Resume, ob
 // DownloadFile - Возвращает файл из minio
 func (m *MinioProvider) DownloadFile(ctx context.Context, objectName string) (models.Resume, error) {
 	// Проверяем существование объекта перед его получением
-	_, err := m.client.StatObject(ctx, "users-resume-pdf", objectName, minio.StatObjectOptions{})
+	_, err := m.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 	if err != nil {
 		// Обрабатываем случай, когда объект не существует
 		return models.Resume{}, fmt.Errorf("объект не найден: %w", err)
