@@ -87,9 +87,14 @@ nav:
       - получение информации о пользователе: auth/get_users_info.md
       - создание информации о пользователе: auth/post_users_info.md
       - изменение информации о пользователе: auth/put_users_info.md
-  - resume_process:
-      - Получение базовых вопросов: resume_process/get_basic_questions.md
-      - Получение доп. вопросов: resume_process/get_followup_questions.md
-      - Генерация списка навыков: resume_process/generate_skills.md
-      - Обновление раздела навыков: resume_process/regenerate_skills.md
-      - Генерация PDF: resume_process/generate_pdf.md
+    - resume_process:
+        - Получение базовых вопросов: resume_process/get_basic_questions.md
+        - Получение доп. вопросов: resume_process/get_followup_questions.md
+        - Генерация списка навыков: resume_process/generate_skills.md
+        - Обновление раздела навыков: resume_process/regenerate_skills.md
+        - Генерация PDF: resume_process/generate_pdf.md
+    - resume:
+      - создание резюме: resume_storage/post_resume.md
+      - получение резюме: resume_storage/get_resume_by_ID.md
+      - получение списка резюме: resume_storage/resume_info_list.md
+      - удаление резюме: resume_storage/delete.md
