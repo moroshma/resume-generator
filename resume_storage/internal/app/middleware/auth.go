@@ -21,7 +21,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 				return
 			}
 
-			req, err := http.NewRequest("GET", "http://localhost:8099/api/v001/auth/check", nil)
+			req, err := http.NewRequest("GET", "http://user-service:8099/api/v001/auth/check", nil)
 			if err != nil {
 				http.Error(w, "Server Error", http.StatusInternalServerError)
 				return

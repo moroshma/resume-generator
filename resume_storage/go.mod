@@ -12,7 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 )
 
-replace github.com/moroshma/resume-generator/user_service => ../user_service/user_service
+replace github.com/moroshma/resume-generator/user_service => ../user_service
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect

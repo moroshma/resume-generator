@@ -11,12 +11,12 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # --- Install System Dependencies (if any) ---
-# <<< ADD THIS BLOCK >>>
+
 # Install fonts needed by fpdf2 for Unicode (e.g., Cyrillic) support
 RUN apt-get update && \
     apt-get install -y --no-install-recommends fonts-dejavu-core && \
     rm -rf /var/lib/apt/lists/*
-# <<< END ADDED BLOCK >>>
+
 
 # --- Install Python Dependencies ---
 COPY requirements.txt .
@@ -27,7 +27,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # --- Expose Port ---
-EXPOSE 8066 # Make sure this matches your intended port
+EXPOSE 8066
 
 # --- Define Runtime Command ---
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8066"] # Match EXPOSE port
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8066"]
