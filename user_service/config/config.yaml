@@ -1,58 +1,9 @@
-discount:
-  http_server:
-    host: "0.0.0.0"
-    port: "8079"
-    timeout: 4s
-    idle_timeout: 30s
+database:
+  user: user_service
+  password: gopassword
+  name: users_db
+  host: tarantool:3301
 
-  grpc_server:
-    host: "0.0.0.0"
-    port: "50051"
-
-  database:
-    user: postgres
-    password: root
-    database_name: discount
-    host: discount_db
-    port: 5432
-  nats:
-    url: "nats://nats:4222"
-
-  logger:
-    level: "info"
-
-notification_service:
-  NATS_TOPIC: "discount.update"
-
-  MAIL_HOST: "smtp.yandex.ru"
-  MAIL_PORT: "587"
-
-shared_transport:
-  http:
-    host: 0.0.0.0
-    port: '8078'
-
-  grpc:
-    host: discount_service
-    port: '50051'
-
-  postgres:
-    username: postgres
-    password: postgres
-    host: transport_db
-    port: 5432
-    name: shared_transport
-    ssl_mode: disable
-
-  logger:
-    level: "info"
-
-user_service:
-  database:
-    user: postgres
-    password: 1234
-    name: users_db
-
-  http:
-    host: 0.0.0.0
-    port: '3000'
+http:
+  host: 0.0.0.0
+  port: '8099'

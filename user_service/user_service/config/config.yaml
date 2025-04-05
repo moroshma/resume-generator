@@ -1,9 +1,0 @@
-database:
-  user: user_service
-  password: gopassword
-  name: users_db
-  host: localhost:3301
-
-http:
-  host: localhost
-  port: '8099'

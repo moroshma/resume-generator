@@ -116,7 +116,7 @@ func (h *ResumeHandler) GetResumeByID(w http.ResponseWriter, r *http.Request) {
 	resume, err := h.resumeUseCase.GetResumeByID(context.Background(), userID, uint(resumeID))
 	if err != nil {
 		logrus.Errorf("Error get resume: %v\n", err)
-		http.Error(w, "Error get resume", http.StatusInternalServerError)
+		http.Error(w, "Error get resume", http.StatusNotFound)
 		return
 	}
 
