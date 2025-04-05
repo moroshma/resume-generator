@@ -3,7 +3,7 @@
 # --- Annotation [routers/resume.py: 1] ---
 # Import FastAPI components: APIRouter for organizing routes, Body for request body handling,
 # HTTPException for returning standard HTTP errors, status for HTTP status codes.
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, status, Response
 
 # --- Annotation [routers/resume.py: 2] ---
 # Import the NeuralService class that handles the core logic (LLM calls).
@@ -40,7 +40,7 @@ neural_service = NeuralService(settings)
 # Uses GET method as it retrieves data without side effects.
 # 'response_model' specifies the schema for the response, ensuring validation
 # and adding it to the OpenAPI documentation.
-@router.get("/questions", response_model=QuestionsResponse)
+@router.get("/api/v001/resume/basic/question", response_model=QuestionsResponse)
 async def get_base_questions():
     """
     Retrieves the initial list of base questions for the resume generation process (Stage 1).
@@ -57,7 +57,7 @@ async def get_base_questions():
 # Uses POST method as it requires data (answers) to perform an action.
 # Takes 'UserAnswers' schema in the request body.
 # Returns 'QuestionsResponse' schema.
-@router.post("/next-questions", response_model=QuestionsResponse)
+@router.post("api/v001/resume/question/get", response_model=QuestionsResponse)
 # --- Annotation [routers/resume.py: 10] ---
 # Mark the function as 'async' since it will call the async 'generate_follow_up_questions' method.
 # 'user_answers: UserAnswers = Body(...)' indicates the request body should match
@@ -105,7 +105,7 @@ async def get_next_questions(user_answers: UserAnswers = Body(...)):
 # Define the endpoint for the final generation step.
 # Uses POST, takes all answers combined by the client ('UserAnswers').
 # Returns the generated skills list ('GeneratedSkillsResponse').
-@router.post("/generate", response_model=GeneratedSkillsResponse)
+@router.post("/api/v001/resume/label/generate", response_model=GeneratedSkillsResponse)
 async def generate_resume_final(user_answers: UserAnswers = Body(...)):
     """
     Generates the final 'hard_skills' section based on ALL provided answers
@@ -141,7 +141,7 @@ async def generate_resume_final(user_answers: UserAnswers = Body(...)):
 # Define the endpoint to update an existing section.
 # Uses POST, takes 'UpdateRequest' schema in the body.
 # Returns 'UpdatedSkillsResponse' schema.
-@router.post("/update", response_model=UpdatedSkillsResponse)
+@router.post("api/v001/resume/label/regenerate", response_model=UpdatedSkillsResponse)
 async def update_resume_section(update_req: UpdateRequest = Body(...)):
     """
     Updates an existing resume section (e.g., hard skills) by integrating new information.
@@ -166,4 +166,60 @@ async def update_resume_section(update_req: UpdateRequest = Body(...)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update resume section. Please try again later.",
             # detail=str(e)
+        )
+
+@router.post("api/v001/resume/pdf/generate")
+async def generate_resume_pdf(user_answers: UserAnswers = Body(...)):
+    """
+    Generates a PDF resume summary based on ALL provided answers.
+    Combines skill generation with PDF creation. Requires authentication.
+
+    Returns:
+        Response: A PDF file download.
+    """
+    # --- Annotation [routers/resume.py: 28] ---
+    # Validate input answers.
+    if not user_answers.answers:
+         raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Answers cannot be empty for PDF generation.",
+        )
+
+    try:
+        # --- Annotation [routers/resume.py: 29] ---
+        # Step 1: Generate the structured skills list using the existing AI service.
+        # This reuses the core logic of the '/generate' endpoint.
+        skills_result = await neural_service.process_answers(user_answers.answers)
+        generated_skills = skills_result.get("hard_skills", []) # Safely get the skills list
+
+        # --- Annotation [routers/resume.py: 30] ---
+        # Step 2: Call the PDF generator function with the original answers and the generated skills.
+        pdf_bytes = create_resume_pdf(user_answers.answers, generated_skills)
+
+        # --- Annotation [routers/resume.py: 31] ---
+        # Step 3: Create and return the FastAPI Response object.
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                # --- Annotation [routers/resume.py: 32] ---
+                # Suggest a filename for the download.
+                "Content-Disposition": "attachment; filename=resume_summary.pdf"
+            }
+        )
+
+    except HTTPException as http_exc:
+        # --- Annotation [routers/resume.py: 33] ---
+        # Re-raise HTTPExceptions that might occur during skill generation.
+        raise http_exc
+    except Exception as e:
+        # --- Annotation [routers/resume.py: 34] ---
+        # Handle potential errors during skill generation or PDF creation.
+        print(f"Error in /generate-pdf endpoint: {e}")
+        # Add more specific logging if needed (e.g., traceback)
+        # import traceback
+        # traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate resume PDF. Please try again later.",
         )

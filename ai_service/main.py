@@ -9,7 +9,7 @@ from ai_service.config import settings
 from ai_service.routers import resume_1
 # --- Annotation [main.py: 3] ---
 # Import the new JWT verification middleware function.
-from ai_service.middleware.auth import verify_jwt_token
+from ai_service.middleware.auth import verify_tokens_via_cookies
 
 # --- Annotation [main.py: 4] ---
 # Create the FastAPI application instance.
@@ -31,7 +31,7 @@ app = FastAPI(
 # The string "http" means this middleware will process standard HTTP requests.
 # Every request (except those explicitly skipped in the middleware)
 # will now pass through 'verify_jwt_token' before reaching the route handlers.
-app.middleware("http")(verify_jwt_token)
+app.middleware("http")(verify_tokens_via_cookies)
 
 # --- Annotation [main.py: 7] ---
 # Include the router defined in routers/resume.py.
