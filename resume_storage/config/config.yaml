@@ -2,13 +2,13 @@ database:
   user: resume
   password: generator
   name: resume_db
-  host: localhost:5432
+  host: postgres-resume-service:5432
 
 http:
-  host: localhost
+  host: 0.0.0.0
   port: '8100'
 
 object_storage:
-  host: localhost:9000
+  host: minio-resume-service:9000
   user: resume
   password: generator
