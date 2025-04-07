@@ -12,3 +12,7 @@ object_storage:
   host: localhost:9000
   user: resume
   password: generator
+
+auth_service:
+  host: http:/localhost
+  port: '8091'

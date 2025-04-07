@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 	"github.com/tarantool/go-tarantool/v2"
-	"log/slog"
 )
 
 type tarantoolUserRepository struct {
@@ -33,37 +32,10 @@ func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
 		return 0, fmt.Errorf("invalid response format")
 	}
 
-	var retUser models.User
-	for k, v := range data {
-		key, ok := k.(string)
-		if !ok {
-			return 0, fmt.Errorf("invalid response format")
-		}
-		switch key {
-		case "status":
-			status, ok := v.(uint8)
-			if !ok {
-				return 0, fmt.Errorf("invalid response format")
-			}
-			if status != 200 {
-				return 0, fmt.Errorf("error create new user, %v", resp)
-			}
-		case "body":
-			checkErr := CheckErrorResponse(v.(string))
+	retUser, err := processTarantoolResponse[models.User](data)
 
-			if checkErr.HasError() {
-				return 0, checkErr
-			}
-
-			err = json.Unmarshal([]byte(v.(string)), &retUser)
-			if err != nil {
-				return 0, err
-			}
-		case "headers":
-			continue
-		default:
-			slog.Any("invalid response format CreateUser", k)
-		}
+	if err != nil {
+		return 0, fmt.Errorf("error processing response: %v", err)
 	}
 
 	return retUser.ID, nil
@@ -87,7 +59,6 @@ func (p tarantoolUserRepository) CreateUserInfo(info models.UserInfo) error {
 }
 
 func (p tarantoolUserRepository) UpdateUserInfo(info models.UserInfo) (models.UserInfo, error) {
-
 	jsonData, err := json.Marshal(info)
 	if err != nil {
 		return models.UserInfo{}, fmt.Errorf("error marshalling user info: %w", err)
@@ -108,43 +79,9 @@ func (p tarantoolUserRepository) UpdateUserInfo(info models.UserInfo) (models.Us
 		return models.UserInfo{}, fmt.Errorf("invalid response from update_user_info")
 	}
 
-	var status uint8
-	var body string
-	var userInfo models.UserInfo
-	for k, v := range data {
-		key, ok := k.(string)
-		if !ok {
-			return models.UserInfo{}, fmt.Errorf("invalid response format")
-		}
-		switch key {
-		case "status":
-			status, ok = v.(uint8)
-			if !ok {
-				return models.UserInfo{}, fmt.Errorf("invalid status value")
-			}
-		case "body":
-			checkErr := CheckErrorResponse(v.(string))
-			if checkErr.HasError() {
-				return models.UserInfo{}, checkErr
-			}
+	_, err = processTarantoolResponse[models.UserInfo](data)
 
-			err = json.Unmarshal([]byte(v.(string)), &userInfo)
-			if err != nil {
-				return models.UserInfo{}, fmt.Errorf("error unmarshaling response: %w", err)
-			}
-		}
-	}
-
-	if status != 200 {
-		var errMsg string
-		return models.UserInfo{}, fmt.Errorf("update_user_info failed: %s", errMsg)
-	}
-
-	if errorResponse := CheckErrorResponse(body); errorResponse.HasError() {
-		return models.UserInfo{}, errorResponse
-	}
-
-	return models.UserInfo{}, nil
+	return p.GetUserInfo(info.UserID)
 }
 
 func (p tarantoolUserRepository) GetUserInfo(id uint) (models.UserInfo, error) {
@@ -162,33 +99,10 @@ func (p tarantoolUserRepository) GetUserInfo(id uint) (models.UserInfo, error) {
 	if len(data) == 0 {
 		return models.UserInfo{}, fmt.Errorf("invalid response format")
 	}
+	userInfo, err := processTarantoolResponse[models.UserInfo](data)
 
-	var userInfo models.UserInfo
-	for k, v := range data {
-		key, ok := k.(string)
-		if !ok {
-			return models.UserInfo{}, fmt.Errorf("invalid response format")
-		}
-		switch key {
-		case "status":
-			status, ok := v.(uint8)
-			if !ok {
-				return models.UserInfo{}, fmt.Errorf("invalid response format")
-			}
-			if status != 200 {
-				return models.UserInfo{}, fmt.Errorf("error getting user info, %v", resp)
-			}
-		case "body":
-			checkErr := CheckErrorResponse(v.(string))
-			if checkErr.HasError() {
-				return models.UserInfo{}, checkErr
-			}
-
-			err = json.Unmarshal([]byte(v.(string)), &userInfo)
-			if err != nil {
-				return models.UserInfo{}, fmt.Errorf("error unmarshaling response: %w", err)
-			}
-		}
+	if err != nil {
+		return models.UserInfo{}, fmt.Errorf("error processing response: %w", err)
 	}
 
 	return userInfo, nil
@@ -210,37 +124,10 @@ func (p tarantoolUserRepository) GetUserByLogin(login string) (models.User, erro
 		return models.User{}, fmt.Errorf("invalid response format")
 	}
 
-	var retUser models.User
-	for k, v := range data {
-		key, ok := k.(string)
-		if !ok {
-			return models.User{}, fmt.Errorf("invalid response format")
-		}
-		switch key {
-		case "status":
-			status, ok := v.(uint8)
-			if !ok {
-				return models.User{}, fmt.Errorf("invalid response format")
-			}
-			if status != 200 {
-				return models.User{}, fmt.Errorf("error login, %v", resp)
-			}
-		case "body":
-			checkErr := CheckErrorResponse(v.(string))
+	retUser, err := processTarantoolResponse[models.User](data)
 
-			if checkErr.HasError() {
-				return models.User{}, checkErr
-			}
-
-			err = json.Unmarshal([]byte(v.(string)), &retUser)
-			if err != nil {
-				return models.User{}, err
-			}
-		case "headers":
-			continue
-		default:
-			slog.Any("invalid response format GetUserByLogin", k)
-		}
+	if err != nil {
+		return models.User{}, fmt.Errorf("error processing response: %v", err)
 	}
 
 	return retUser, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	"github.com/moroshma/resume-generator/resume_storage/internal/app/config"
 	"github.com/moroshma/resume-generator/resume_storage/internal/app/middleware"
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/models"
 	"github.com/moroshma/resume-generator/user_service/pkg/auth_middleware"
@@ -30,9 +31,9 @@ func NewResumeHandler(resumeUseCase ResumeUseCase) *ResumeHandler {
 	}
 }
 
-func NewResumeRoutes(r *chi.Mux, resumeUseCase ResumeUseCase) {
+func NewResumeRoutes(r *chi.Mux, resumeUseCase ResumeUseCase, cfg *config.UserService) {
 	resumeHandler := NewResumeHandler(resumeUseCase)
-	r.With(middleware.AuthMiddleware()).Route("/api/v001/users", func(r chi.Router) {
+	r.With(middleware.AuthMiddleware(cfg.AuthService.Host+":"+cfg.AuthService.Port)).Route("/api/v001/users", func(r chi.Router) {
 		r.Post("/resume", resumeHandler.CreateResume)
 		r.Delete("/resume/{id}", resumeHandler.DeleteResumeByID)
 		r.Get("/resume/{id}", resumeHandler.GetResumeByID)

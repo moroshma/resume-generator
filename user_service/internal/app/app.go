@@ -27,7 +27,7 @@ func Run() {
 	var configPath string
 	if os.Getenv("APP_ENV") == "" || os.Getenv("APP_ENV") == "dev" {
 		configPath = "./config/config_dev.yaml"
-	} else {
+	} else if os.Getenv("APP_ENV") == "prod" {
 		configPath = "./config/config_prod.yaml"
 	}
 
@@ -41,7 +41,6 @@ func Run() {
 	r.Use(middleware.CORSMiddleware())
 	r.Use(chi_middelware.Logger)
 
-	//dbName := cfg.Database.Name
 	dbUser := cfg.Database.User
 	dbPassword := cfg.Database.Password
 	dbHost := cfg.Database.Host
