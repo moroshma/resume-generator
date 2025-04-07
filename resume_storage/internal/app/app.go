@@ -12,13 +12,20 @@ import (
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/delivery/http"
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/resume_storage"
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/usecase"
+	"os"
 
 	"log"
 	"net/http"
 )
 
 func Run() {
-	configPath := "./config/config.yaml"
+	var configPath string
+	if os.Getenv("APP_ENV") == "" || os.Getenv("APP_ENV") == "dev" {
+		configPath = "./config/config_dev.yaml"
+	} else {
+		configPath = "./config/config_prod.yaml"
+	}
+
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
@@ -26,7 +33,6 @@ func Run() {
 
 	r := chi.NewRouter()
 	r.Use(chi_middelware.Logger)
-	// add recovery middleware to catch panics
 	r.Use(middleware.RecoverMiddleware())
 	r.Use(middleware.CORSMiddleware())
 

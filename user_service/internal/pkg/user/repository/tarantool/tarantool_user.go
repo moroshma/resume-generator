@@ -86,59 +86,65 @@ func (p tarantoolUserRepository) CreateUserInfo(info models.UserInfo) error {
 	return nil
 }
 
-func (p tarantoolUserRepository) UpdateUserInfo(info models.UserInfo) error {
+func (p tarantoolUserRepository) UpdateUserInfo(info models.UserInfo) (models.UserInfo, error) {
 
 	jsonData, err := json.Marshal(info)
 	if err != nil {
-		return fmt.Errorf("error marshalling user info: %w", err)
+		return models.UserInfo{}, fmt.Errorf("error marshalling user info: %w", err)
 	}
 
 	request := tarantool.NewCallRequest("update_user_info").Args([]interface{}{string(jsonData)})
 	resp, err := p.conn.Do(request).Get()
 	if err != nil {
-		return fmt.Errorf("error calling update_user_info: %w", err)
+		return models.UserInfo{}, fmt.Errorf("error calling update_user_info: %w", err)
 	}
 
 	if len(resp) == 0 {
-		return fmt.Errorf("empty response from update_user_info")
+		return models.UserInfo{}, fmt.Errorf("empty response from update_user_info")
 	}
 
 	data, ok := resp[0].(map[interface{}]interface{})
 	if !ok || len(data) == 0 {
-		return fmt.Errorf("invalid response from update_user_info")
+		return models.UserInfo{}, fmt.Errorf("invalid response from update_user_info")
 	}
 
 	var status uint8
 	var body string
+	var userInfo models.UserInfo
 	for k, v := range data {
 		key, ok := k.(string)
 		if !ok {
-			return fmt.Errorf("invalid response format")
+			return models.UserInfo{}, fmt.Errorf("invalid response format")
 		}
 		switch key {
 		case "status":
 			status, ok = v.(uint8)
 			if !ok {
-				return fmt.Errorf("invalid status value")
+				return models.UserInfo{}, fmt.Errorf("invalid status value")
 			}
 		case "body":
-			body, _ = v.(string)
+			checkErr := CheckErrorResponse(v.(string))
+			if checkErr.HasError() {
+				return models.UserInfo{}, checkErr
+			}
+
+			err = json.Unmarshal([]byte(v.(string)), &userInfo)
+			if err != nil {
+				return models.UserInfo{}, fmt.Errorf("error unmarshaling response: %w", err)
+			}
 		}
 	}
 
 	if status != 200 {
 		var errMsg string
-		if body != "" {
-			errMsg = body
-		}
-		return fmt.Errorf("update_user_info failed: %s", errMsg)
+		return models.UserInfo{}, fmt.Errorf("update_user_info failed: %s", errMsg)
 	}
 
 	if errorResponse := CheckErrorResponse(body); errorResponse.HasError() {
-		return errorResponse
+		return models.UserInfo{}, errorResponse
 	}
 
-	return nil
+	return models.UserInfo{}, nil
 }
 
 func (p tarantoolUserRepository) GetUserInfo(id uint) (models.UserInfo, error) {

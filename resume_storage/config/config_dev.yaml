@@ -1,0 +1,14 @@
+database:
+  user: resume
+  password: generator
+  name: resume_db
+  host: localhost:5432
+
+http:
+  host: localhost
+  port: '8100'
+
+object_storage:
+  host: localhost:9000
+  user: resume
+  password: generator

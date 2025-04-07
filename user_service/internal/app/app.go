@@ -6,6 +6,7 @@ import (
 	"github.com/tarantool/go-tarantool/v2"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,14 +24,19 @@ import (
 )
 
 func Run() {
-	configPath := "./config/config.yaml"
+	var configPath string
+	if os.Getenv("APP_ENV") == "" || os.Getenv("APP_ENV") == "dev" {
+		configPath = "./config/config_dev.yaml"
+	} else {
+		configPath = "./config/config_prod.yaml"
+	}
+
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
 	r := chi.NewRouter()
-	// add recovery middleware to catch panics
 	r.Use(middleware.RecoverMiddleware())
 	r.Use(middleware.CORSMiddleware())
 	r.Use(chi_middelware.Logger)
@@ -47,7 +53,7 @@ func Run() {
 		User:     dbUser,
 		Password: dbPassword,
 	}
-	// Configure connection options
+
 	opts := tarantool.Opts{
 		Timeout:       5 * time.Second,
 		Reconnect:     1 * time.Second,

@@ -474,8 +474,8 @@ function update_user_info(info)
 
     return utils.raw_response({
         status = 200,
-        message = "User information updated successfully"
-
+        message = "User information updated successfully",
+        get_user_info(data.user_id)
     })
 end
 

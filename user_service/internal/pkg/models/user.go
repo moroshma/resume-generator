@@ -50,7 +50,7 @@ type SocialProfiles struct {
 type UserUseCaseI interface {
 	CreateUser(User) (uint, error)
 	CreateUserInfo(UserInfo) error
-	UpdateUserInfo(uint, UserInfo) error
+	UpdateUserInfo(uint, UserInfo) (UserInfo, error)
 	GetUserInfo(id uint) (UserInfo, error)
 	Authenticate(User) (User, error)
 }
@@ -58,7 +58,7 @@ type UserUseCaseI interface {
 type UserRepositoryI interface {
 	CreateUser(User) (uint, error)
 	CreateUserInfo(UserInfo) error
-	UpdateUserInfo(UserInfo) error
+	UpdateUserInfo(UserInfo) (UserInfo, error)
 	GetUserInfo(id uint) (UserInfo, error)
 	GetUserByLogin(login string) (User, error)
 }

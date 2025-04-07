@@ -46,7 +46,7 @@ func (uc *userUseCase) CreateUserInfo(info models.UserInfo) error {
 	return uc.userRepository.CreateUserInfo(info)
 }
 
-func (uc *userUseCase) UpdateUserInfo(userID uint, info models.UserInfo) error {
+func (uc *userUseCase) UpdateUserInfo(userID uint, info models.UserInfo) (models.UserInfo, error) {
 	info.UserID = userID
 
 	return uc.userRepository.UpdateUserInfo(info)

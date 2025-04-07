@@ -100,12 +100,13 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = handlers.userUseCase.UpdateUserInfo(id, user)
+	userInfo, err := handlers.userUseCase.UpdateUserInfo(id, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	json.NewEncoder(w).Encode(userInfo)
 	w.WriteHeader(http.StatusOK)
 }
 
