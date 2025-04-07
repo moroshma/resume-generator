@@ -6,7 +6,7 @@ import (
 
 var client = http.Client{}
 
-func AuthMiddleware() func(http.Handler) http.Handler {
+func AuthMiddleware(authHost string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			refreshToken, err := r.Cookie("Refresh-Token")
@@ -21,7 +21,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 				return
 			}
 
-			req, err := http.NewRequest("GET", "http://user-service:8099/api/v001/auth/check", nil)
+			req, err := http.NewRequest("GET", authHost+"/api/v001/auth/check", nil)
 			if err != nil {
 				http.Error(w, "Server Error", http.StatusInternalServerError)
 				return

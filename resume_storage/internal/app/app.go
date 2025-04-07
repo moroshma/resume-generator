@@ -12,13 +12,21 @@ import (
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/delivery/http"
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/resume_storage"
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/usecase"
+	"os"
+	"time"
 
 	"log"
 	"net/http"
 )
 
 func Run() {
-	configPath := "./config/config.yaml"
+	var configPath string
+	if os.Getenv("APP_ENV") == "" || os.Getenv("APP_ENV") == "dev" {
+		configPath = "./config/config_dev.yaml"
+	} else if os.Getenv("APP_ENV") == "prod" {
+		configPath = "./config/config_prod.yaml"
+	}
+
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
@@ -26,7 +34,6 @@ func Run() {
 
 	r := chi.NewRouter()
 	r.Use(chi_middelware.Logger)
-	// add recovery middleware to catch panics
 	r.Use(middleware.RecoverMiddleware())
 	r.Use(middleware.CORSMiddleware())
 
@@ -49,9 +56,18 @@ func Run() {
 	}
 	defer connPool.Close()
 
-	err = connPool.Ping(context.Background())
+	for i := 0; i < 5; i++ {
+		err = connPool.Ping(context.Background())
+		if err == nil {
+			break
+		}
+		if i < 4 {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
 	if err != nil {
-		log.Fatal("Error while pinging the database!!")
+		log.Fatal("Ошибка: не удалось подключиться к базе данных после 5 попыток")
 	}
 
 	mp, err := resume_storage.NewMinioProvider(objectStorageHost, objectStorageUser, objectStoragePassword, false)
@@ -68,7 +84,7 @@ func Run() {
 	}
 	resumeUseCase := usecase.NewResumeUseCase(postgresProvider, mp)
 
-	resume_handlers.NewResumeRoutes(r, resumeUseCase)
+	resume_handlers.NewResumeRoutes(r, resumeUseCase, cfg)
 
 	httpAddress := fmt.Sprintf("%s:%s", httpHost, httpPort)
 	log.Printf("Starting server at %s", httpAddress)

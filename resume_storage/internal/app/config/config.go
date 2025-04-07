@@ -23,6 +23,11 @@ type UserService struct {
 		Host string `yaml:"host" env:"HTTP_HOST"`
 		Port string `yaml:"port" env:"HTTP_PORT"`
 	} `yaml:"http"`
+
+	AuthService struct {
+		Host string `yaml:"host" env:"AUTH_SERVICE_HOST"`
+		Port string `yaml:"port" env:"AUTH_SERVICE_PORT"`
+	} `yaml:"auth_service"`
 }
 
 func LoadConfig(filepath string) (*UserService, error) {
