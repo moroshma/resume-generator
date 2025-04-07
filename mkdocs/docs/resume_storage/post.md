@@ -3,7 +3,7 @@
 ## API
 
 ```
-    POST|api/v001/user/resume
+    POST|api/v001/users/resume
 ```
 
 ### Request: PDF - field resume

@@ -3,7 +3,7 @@
 ## API
 
 ```
-    GET|api/v001/user/resume/{id}
+    GET|api/v001/users/resume/{id}
 ```
 
 ### Response:
