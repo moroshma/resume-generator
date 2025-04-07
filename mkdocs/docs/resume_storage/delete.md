@@ -3,7 +3,7 @@
 ## API
 
 ```
-    DELETE| api/v001/user/resume/{id}
+    DELETE| api/v001/users/resume/{id}
 ```
 
 ### Response:

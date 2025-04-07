@@ -85,6 +85,18 @@ services:
       - postgres-resume-service
       - minio-resume-service
 
+  nginx:
+      image: nginx:latest
+      ports:
+        - "8080:80"
+      volumes:
+        - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+        - ./nginx/proxy_params.conf:/etc/nginx/proxy_params.conf
+      depends_on:
+        - user-service
+        - ai-service
+        - resume-storage
+
 volumes:
   minio-storage:
   postgres-data:
