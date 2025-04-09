@@ -1,6 +1,8 @@
 box.cfg {
     listen = '0.0.0.0:3301',
-    log_level = 5  -- Устанавливаем максимальный уровень логирования
+    log_level = 5,
+    wal_mode = 'write',
+    checkpoint_interval = 3600
 }
 
 require('log').info("I am a test app!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -155,7 +157,7 @@ function create_new_user(login, password)
     local users = box.space.users
     local exists = users.index.login:get(login)
     if exists ~= nil then
-        return utils.raw_response({ error = "User with this login already exists" })
+        return utils.raw_response({ error = "user with this login already exists" })
     end
 
     local new_id = get_next_id('users')
