@@ -17,7 +17,7 @@ func NewPostgresProvider(db *pgxpool.Pool) (*postgresProvider, error) {
 
 func (p *postgresProvider) DeleteResumeByID(ctx context.Context, userID, resumeID uint) error {
 	rd, err := p.db.Exec(ctx,
-		"delete from resume where resume_id = $1 and user_id = $2",
+		deleteResumeByIDQuery,
 		resumeID, userID,
 	)
 	if err != nil {
@@ -33,7 +33,7 @@ func (p *postgresProvider) DeleteResumeByID(ctx context.Context, userID, resumeI
 func (p *postgresProvider) GetResumeInfoByID(ctx context.Context, userID, resumeID uint) (models.ResumeInfo, error) {
 	var resumeInfo models.ResumeInfo
 	err := p.db.QueryRow(ctx,
-		"select resume_id, user_id, created_at, title from resume where resume_id = $1 and user_id = $2",
+		getResumeInfoByIDQuery,
 		resumeID, userID,
 	).Scan(&resumeInfo.ResumeID, &resumeInfo.UserID, &resumeInfo.CreatedAt, &resumeInfo.Title)
 	if err != nil {
@@ -46,7 +46,7 @@ func (p *postgresProvider) GetResumeInfoByID(ctx context.Context, userID, resume
 func (p *postgresProvider) GetAllResumesPreview(ctx context.Context, userID uint) ([]models.ResumeInfo, error) {
 	var resumes []models.ResumeInfo
 	rows, err := p.db.Query(ctx,
-		"select resume_id, user_id, created_at, title from resume where user_id = $1",
+		getAllResumesPreviewQuery,
 		userID,
 	)
 	if err != nil {
@@ -69,7 +69,7 @@ func (p *postgresProvider) GetAllResumesPreview(ctx context.Context, userID uint
 func (p *postgresProvider) CreateResume(ctx context.Context, userID uint, title string) (uint, error) {
 	var resumeID uint
 	err := p.db.QueryRow(ctx,
-		"insert into resume (user_id, title) values ($1, $2) returning resume_id",
+		createResumeQuery,
 		userID, title,
 	).Scan(&resumeID)
 	if err != nil {
@@ -78,12 +78,3 @@ func (p *postgresProvider) CreateResume(ctx context.Context, userID uint, title 
 
 	return resumeID, nil
 }
-
-/* resume schema
-create table resume (
-    resume_id serial primary key,
-    user_id int not null,
-    created_at timestamp default now(),
-    title varchar(1024) not null
-);
-*/

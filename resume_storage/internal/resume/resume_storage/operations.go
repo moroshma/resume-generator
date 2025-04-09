@@ -7,7 +7,7 @@ import (
 	"github.com/moroshma/resume-generator/resume_storage/internal/resume/models"
 )
 
-// UploadFile - Отправляет файл в minio
+// UploadFile - upload file to minio
 func (m *MinioProvider) UploadFile(ctx context.Context, object models.Resume, objectName string) error {
 	_, err := m.client.PutObject(
 		ctx,
@@ -21,13 +21,11 @@ func (m *MinioProvider) UploadFile(ctx context.Context, object models.Resume, ob
 	return err
 }
 
-// DownloadFile - Возвращает файл из minio
+// DownloadFile - return file from minio
 func (m *MinioProvider) DownloadFile(ctx context.Context, objectName string) (models.Resume, error) {
-	// Проверяем существование объекта перед его получением
 	_, err := m.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 	if err != nil {
-		// Обрабатываем случай, когда объект не существует
-		return models.Resume{}, fmt.Errorf("объект не найден: %w", err)
+		return models.Resume{}, fmt.Errorf("object not found: %w", err)
 	}
 
 	reader, err := m.client.GetObject(
@@ -45,10 +43,9 @@ func (m *MinioProvider) DownloadFile(ctx context.Context, objectName string) (mo
 		}
 	}()
 
-	// Получаем информацию об объекте для дополнительных метаданных
 	stat, err := reader.Stat()
 	if err != nil {
-		return models.Resume{}, fmt.Errorf("ошибка получения информации об объекте: %w", err)
+		return models.Resume{}, fmt.Errorf("error read from bucket: %w", err)
 	}
 
 	return models.Resume{
@@ -58,7 +55,7 @@ func (m *MinioProvider) DownloadFile(ctx context.Context, objectName string) (mo
 	}, nil
 }
 
-// DeleteFile - Удаляет файл из minio
+// DeleteFile - delete file from minio
 func (m *MinioProvider) DeleteFile(ctx context.Context, objectName string) (string, error) {
 	err := m.client.RemoveObject(
 		ctx,

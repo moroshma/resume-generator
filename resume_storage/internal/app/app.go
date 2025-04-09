@@ -67,7 +67,7 @@ func Run() {
 	}
 
 	if err != nil {
-		log.Fatal("Ошибка: не удалось подключиться к базе данных после 5 попыток")
+		log.Fatal("error while pinging the database!!")
 	}
 
 	mp, err := resume_storage.NewMinioProvider(objectStorageHost, objectStorageUser, objectStoragePassword, false)

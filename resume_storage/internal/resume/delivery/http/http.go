@@ -60,7 +60,6 @@ func (h *ResumeHandler) CreateResume(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем файл из формы
 	src, hdr, err := r.FormFile("resume")
 	if err != nil {
 		http.Error(w, "Неверный запрос: "+err.Error(), http.StatusBadRequest)
