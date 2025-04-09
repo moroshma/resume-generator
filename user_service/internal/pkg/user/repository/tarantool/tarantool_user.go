@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 	"github.com/tarantool/go-tarantool/v2"
+	"strings"
 )
 
 type tarantoolUserRepository struct {
@@ -15,6 +16,8 @@ type tarantoolUserRepository struct {
 func NewTarantoolUserRepository(db *tarantool.Connection) models.UserRepositoryI {
 	return &tarantoolUserRepository{db}
 }
+
+var CollisionCrateUser = errors.New("user with this login already exists")
 
 func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
 	request := tarantool.NewCallRequest("create_new_user").Args([]interface{}{user.Login, user.Password})
@@ -35,7 +38,10 @@ func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
 	retUser, err := processTarantoolResponse[models.User](data)
 
 	if err != nil {
-		return 0, fmt.Errorf("error processing response: %v", err)
+		if strings.Contains(err.Error(), "user with this login already exists") {
+			return 0, CollisionCrateUser
+		}
+		return 0, err
 	}
 
 	return retUser.ID, nil

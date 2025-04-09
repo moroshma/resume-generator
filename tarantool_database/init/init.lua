@@ -155,7 +155,7 @@ function create_new_user(login, password)
     local users = box.space.users
     local exists = users.index.login:get(login)
     if exists ~= nil then
-        return utils.raw_response({ error = "User with this login already exists" })
+        return utils.raw_response({ error = "user with this login already exists" })
     end
 
     local new_id = get_next_id('users')

@@ -2,7 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/moroshma/resume-generator/user_service/internal/app/helper"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/user/repository/tarantool"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -22,7 +25,7 @@ func NewAuthHandlers(r *chi.Mux,
 
 	r.Route("/api/v001/auth", func(r chi.Router) {
 		r.Get("/refresh", handlers.generateAccessTokenByRefreshToken)
-		r.Post("/register", handlers.register)
+		r.Post("/register", helper.Make(handlers.register))
 		r.Post("/login", handlers.logIn)
 		r.With(middleware.AuthMiddleware()).Delete("/logout", handlers.logOut)
 		r.With(middleware.AuthMiddleware()).Get("/check", handlers.authCheck)
@@ -38,23 +41,23 @@ func NewAuthHandlers(r *chi.Mux,
 // @Success 201 {object} models.User "User registered successfully"
 // @Failure 400 {string} string "Bad Request"
 // @Router /api/v001/auth/register [post]
-func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) {
+func (handlers *authHandlers) register(w http.ResponseWriter, r *http.Request) error {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return helper.NewAPIError(http.StatusBadRequest, err.Error())
 	}
 
 	generatedID, err := handlers.userUseCase.CreateUser(user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	if errors.Is(err, tarantool.CollisionCrateUser) {
+		return helper.NewAPIError(http.StatusConflict, err.Error())
+	} else if err != nil {
+		return err
 	}
 
 	user.ID = generatedID
-
 	w.WriteHeader(http.StatusCreated)
+	return nil
 }
 
 // logIn handles user login.
