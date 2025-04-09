@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"time"
 )
 
 const bucketName = "users-resume-pdf"
@@ -34,25 +35,28 @@ func NewMinioProvider(minioURL string, minioUser string, minioPassword string, s
 
 func (m *MinioProvider) Connect() error {
 	var err error
-	m.client, err = minio.New(m.url, &minio.Options{
-		Creds:  credentials.NewStaticV4(m.user, m.password, ""),
-		Secure: m.ssl,
-	})
-	if err != nil {
-		return fmt.Errorf("ошибка подключения к MinIO: %w", err)
+	for i := range 5 {
+		m.client, err = minio.New(m.url, &minio.Options{
+			Creds:  credentials.NewStaticV4(m.user, m.password, ""),
+			Secure: m.ssl,
+		})
+
+		if err != nil && i == 4 {
+			return fmt.Errorf("error connect to  MinIO: %w", err)
+		}
+
+		time.Sleep(1 * time.Second)
 	}
 
-	// Проверяем, существует ли бакет
-	exists, err := m.client.BucketExists(context.Background(), "users-resume-pdf")
+	exists, err := m.client.BucketExists(context.Background(), bucketName)
 	if err != nil {
-		return fmt.Errorf("ошибка проверки бакета: %w", err)
+		return fmt.Errorf("error check bucket: %w", err)
 	}
 
-	// Если бакет не существует, создаем его
 	if !exists {
-		err = m.client.MakeBucket(context.Background(), "users-resume-pdf", minio.MakeBucketOptions{})
+		err = m.client.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
 		if err != nil {
-			return fmt.Errorf("ошибка создания бакета: %w", err)
+			return fmt.Errorf("error create bucket: %w", err)
 		}
 	}
 
