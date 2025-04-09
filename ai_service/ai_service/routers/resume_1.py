@@ -57,7 +57,7 @@ async def get_base_questions():
 # Uses POST method as it requires data (answers) to perform an action.
 # Takes 'UserAnswers' schema in the request body.
 # Returns 'QuestionsResponse' schema.
-@router.post("api/v001/resume/question/get", response_model=QuestionsResponse)
+@router.post("/api/v001/resume/question/get", response_model=QuestionsResponse)
 # --- Annotation [routers/resume.py: 10] ---
 # Mark the function as 'async' since it will call the async 'generate_follow_up_questions' method.
 # 'user_answers: UserAnswers = Body(...)' indicates the request body should match
