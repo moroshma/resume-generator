@@ -20,6 +20,7 @@ services:
     volumes:
       - ./tarantool_database/init:/opt/tarantool
       - ./tarantool_database/utils:/opt/tarantool/utils
+      - tarantool-data:/var/lib/tarantool     # новый том для данных
     environment:
       - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua
     ports:
@@ -117,3 +118,4 @@ services:
 volumes:
   minio-storage:
   postgres-data:
+  tarantool-data:

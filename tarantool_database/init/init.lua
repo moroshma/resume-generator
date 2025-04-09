@@ -1,6 +1,8 @@
 box.cfg {
     listen = '0.0.0.0:3301',
-    log_level = 5  -- Устанавливаем максимальный уровень логирования
+    log_level = 5,
+    wal_mode = 'write',
+    checkpoint_interval = 3600
 }
 
 require('log').info("I am a test app!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
