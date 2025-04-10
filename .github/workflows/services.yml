@@ -26,6 +26,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install mkdocs mkdocs-material mkdocs-table-reader-plugin
 
+      - name: Update MkDocs config
+        run: |
+          cd mkdocs
+          echo "site_url: https://moroshma.github.io/resume-generator/" >> mkdocs.yml
+          echo "repo_url: https://github.com/moroshma/resume-generator" >> mkdocs.yml
+
       - name: Build MkDocs
         run: |
           cd mkdocs
@@ -36,3 +42,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./mkdocs/site
+          force_orphan: true  # Создаст чистую ветку gh-pages
