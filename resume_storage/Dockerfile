@@ -1,30 +1,26 @@
 FROM golang:latest AS builder
 WORKDIR /app
 
-# Копируем весь проект
-COPY . .
-
-# Переходим в директорию с go.mod
-WORKDIR /app/resume_storage
-
-# Загружаем зависимости
+# Copy go mod files
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Собираем приложение
+# Copy source code
+COPY . .
+
+# Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/main.go
 
-# Финальный этап
+# Final stage
 FROM alpine:latest
 WORKDIR /app
 
-# Копируем бинарник из builder
-COPY --from=builder /app/resume_storage/main .
+# Copy the binary from builder
+COPY --from=builder /app/main .
+COPY --from=builder /app/config ./config
 
-# Копируем конфигурацию, если она есть
-COPY --from=builder /app/resume_storage/config ./config
+# Expose port
+EXPOSE 8099
 
-# Экспортируем порт
-EXPOSE 8100
-
-# Запускаем приложение
+# Run the application
 CMD ["./main"]
