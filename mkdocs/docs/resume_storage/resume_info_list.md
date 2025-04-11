@@ -6,7 +6,6 @@
     GET|api/v001/users/resume/list
 ```
 
-
 ### Response:
 
 ??? success "Статус 200 — Успешное выполнение запроса"
