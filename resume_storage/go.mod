@@ -8,11 +8,9 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/minio/minio-go/v7 v7.0.89
-	github.com/moroshma/resume-generator/user_service v0.0.1
+	github.com/moroshma/resume-generator/user_service v0.0.0-20250411224735-e034ccd1c4bb
 	github.com/sirupsen/logrus v1.9.3
 )
-
-replace github.com/moroshma/resume-generator/user_service => ../user_service
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
