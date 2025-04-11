@@ -9,7 +9,7 @@ on:
 
 env:
   SERVICE_NAME: user-service
-  DOCKER_HUB_REPO: qwikman/resume-generator
+  DOCKER_HUB_REPO: qwikman/user-service
 
 jobs:
   build-and-push:
