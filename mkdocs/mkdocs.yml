@@ -94,7 +94,7 @@ nav:
         - Обновление раздела навыков: resume_process/regenerate_skills.md
         - Генерация PDF: resume_process/generate_pdf.md
     - resume:
-      - создание резюме: resume_storage/post_resume.md
+      - создание резюме: resume_storage/post.md
       - получение резюме: resume_storage/get_resume_by_ID.md
       - получение списка резюме: resume_storage/resume_info_list.md
       - удаление резюме: resume_storage/delete.md
