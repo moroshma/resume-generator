@@ -83,7 +83,7 @@ services:
     command: tarantool /opt/tarantool/init.lua
     networks:
       - internal
-      - proxy # Нужна для связи с user-service, если он в proxy
+      - proxy
     logging:
       driver: "json-file"
       options:
@@ -100,10 +100,9 @@ services:
 
   # User Service
   user-service:
-    image: qwikman/user-service:latest # Убедитесь, что этот образ существует и доступен
+    image: qwikman/user-service:main # Убедитесь, что этот образ существует и доступен
     environment:
-      - DB_HOST=tarantool # Обращаемся по имени сервиса
-      - DB_PORT=3301      # Укажите порт явно, если нужно
+      - DB_HOST=tarantool:3301
       - APP_ENV=prod
     networks:
       - proxy # Сеть для Traefik
@@ -131,7 +130,7 @@ services:
 
   # AI Service
   ai-service:
-    image: qwikman/ai-service:latest # Замените на ваш реальный образ
+    image: qwikman/ai-service:main # Замените на ваш реальный образ
     environment:
       - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check
       # Добавьте остальные переменные окружения или используйте секреты
@@ -184,15 +183,6 @@ services:
       #     - node.labels.storage == true
       restart_policy:
         condition: on-failure
-      labels: # Пример лейблов для доступа к Minio Console через Traefik
-        - "traefik.enable=true"
-        - "traefik.docker.network=proxy"
-        # Роутер для Minio Console (пример - доступ по поддомену)
-        - "traefik.http.routers.minio-console.rule=Host(`minio.localhost`)" # Замените на ваш домен или используйте PathPrefix
-        - "traefik.http.routers.minio-console.entrypoints=web"
-        - "traefik.http.routers.minio-console.service=minio-console-svc" # Имя сервиса Traefik
-        # Сервис для Minio Console
-        - "traefik.http.services.minio-console-svc.loadbalancer.server.port=9001" # Порт консоли внутри контейнера
 
   # Postgres Resume Service
   postgres-resume-service:
@@ -222,7 +212,7 @@ services:
 
   # Resume Storage Service
   resume-storage:
-    image: qwikman/resume-storage:latest # Замените на ваш реальный образ
+    image: qwikman/resume-storage:main # Замените на ваш реальный образ
     environment:
       - APP_ENV=prod
       - DB_HOST=postgres-resume-service
