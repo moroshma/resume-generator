@@ -4,6 +4,7 @@
 # Use httpx for making async HTTP calls to the LLM API.
 import httpx
 import json
+import re
 # --- Annotation [services/neural.py: 2] ---
 # Import settings and typing helpers.
 from ai_service.config import Settings
@@ -24,6 +25,8 @@ class NeuralService:
         }
         # --- Annotation [services/neural.py: 5] ---
         # Add checks during initialization to warn if critical settings seem missing.
+
+
         if not self.settings.API_KEY or self.settings.API_KEY == "some-key":
             print("Warning: OPENROUTER_API_KEY not set or using default in config.")
         if not self.settings.AUTH_SERVICE_URL or "localhost" in self.settings.AUTH_SERVICE_URL:
@@ -150,45 +153,63 @@ class NeuralService:
     # Marked async because it calls the async _call_api method.
     async def generate_follow_up_questions(self, answers: Dict[str, str]) -> List[str]:
         """Generates follow-up questions based on previous answers using the LLM."""
-        # --- Annotation [services/neural.py: 24] ---
-        # Format the previous answers clearly for the LLM context.
         user_text = "Предыдущие ответы пользователя:\n" + "\n".join(f"- {k}: {v}" for k, v in answers.items())
-        user_text += "\n\n---\nСгенерируй 5-7 уточняющих вопросов на основе этих ответов в формате JSON-массива строк."
+        # Updated instruction consistent with the new prompt
+        user_text += '\n\n---\nСгенерируй 5-7 уточняющих вопросов на основе этих ответов в формате JSON-объекта {"questions": ["вопрос1", "вопрос2", ...]}'
 
-        # --- Annotation [services/neural.py: 25] ---
-        # Call the LLM API using the specific system prompt for QUESTION GENERATION.
+        print("Sending request to LLM for follow-up questions...")
         raw_response = await self._call_api(user_text, self.settings.FOLLOW_UP_QUESTIONS_PROMPT)
+        print(f"LLM Raw Response for questions: {raw_response}") # Keep logging raw response
 
-        # --- Annotation [services/neural.py: 26] ---
+        #--- Annotation [services/neural.py: 26] ---
         # Attempt to parse the LLM response, expecting a JSON array of strings.
         try:
             # --- Annotation [services/neural.py: 27] ---
-            # Handle cases where the LLM might wrap the JSON in markdown code blocks.
-            processed_response = raw_response.strip()
+            # Handle cases where the LLM might wrap the JSON in markdown code blocks
+            # AND remove potential trailing artifacts like \boxed{...}
+            processed_response = raw_response.strip()[6:]
+
+            # Remove markdown blocks first
             if processed_response.startswith("```json"):
                 processed_response = processed_response[7:-3].strip()
             elif processed_response.startswith("```"):
                  processed_response = processed_response[3:-3].strip()
+
+            # --- NEW: Find the end of the actual JSON data ---
+            # Find the last occurrence of '}' or ']' which likely marks the end
+            # of the primary JSON object or array returned by the LLM.
+            last_brace = processed_response.rfind('}')
+            last_bracket = processed_response.rfind(']')
+            end_json_pos = max(last_brace, last_bracket)
+
+            if end_json_pos != -1:
+                # Truncate the string just after the found brace/bracket
+                processed_response = processed_response[:end_json_pos + 1]
+            else:
+                # If no '}' or ']' is found, the response is likely not valid JSON anyway
+                # Let json.loads handle the error below.
+                print("Warning: No closing brace or bracket found in LLM response for questions.")
+
+            # Log the cleaned response right before parsing
+            print(f"Cleaned response before parsing was:\n{processed_response}")
 
             # --- Annotation [services/neural.py: 28] ---
             # Parse the cleaned string as JSON.
             questions_data = json.loads(processed_response)
 
             # --- Annotation [services/neural.py: 29] ---
-            # Validate the structure: should be a list of strings.
+            # Validate the structure: should be a list of strings OR a dict containing a list.
             if isinstance(questions_data, list) and all(isinstance(item, str) for item in questions_data):
                 return questions_data
             # --- Annotation [services/neural.py: 30] ---
             # Handle alternative structure sometimes returned: {"questions": [...]}.
             elif isinstance(questions_data, dict) and "questions" in questions_data and isinstance(questions_data["questions"], list):
-                # Ensure items in the list are strings
-                if all(isinstance(item, str) for item in questions_data["questions"]):
-                    return questions_data["questions"]
-                else:
-                    raise ValueError("LLM returned a 'questions' list, but it contains non-string items.")
+                 if all(isinstance(item, str) for item in questions_data["questions"]):
+                     return questions_data["questions"]
+                 else:
+                     raise ValueError("LLM returned a 'questions' list, but it contains non-string items.")
             else:
                  # --- Annotation [services/neural.py: 31] ---
-                 # If the structure is unexpected, raise an error.
                  print(f"Warning: LLM returned unexpected JSON structure for questions: {questions_data}")
                  raise ValueError("LLM did not return a valid JSON list/object of strings for questions.")
 
@@ -196,20 +217,10 @@ class NeuralService:
         # Catch JSON decoding errors.
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON response for questions: {e}")
-            print(f"LLM Raw response was: {raw_response}")
-            # Re-raise as a more specific error or generic Exception.
+            # Log the problematic string *again* in case of error
+            print(f"LLM Raw response was:\n{raw_response}")
+            print(f"String attempted for parsing was:\n{processed_response}")
             raise Exception(f"Failed to parse questions from LLM response (Invalid JSON).")
-        # --- Annotation [services/neural.py: 33] ---
-        # Catch validation errors raised above.
-        except ValueError as e:
-             print(f"Validation Error for generated questions: {e}")
-             raise Exception(f"Failed to parse questions from LLM response (Invalid Structure).") # Re-raise
-        # --- Annotation [services/neural.py: 34] ---
-        # Catch any other unexpected errors during parsing/validation.
-        except Exception as e:
-            print(f"An unexpected error occurred during question generation parsing: {e}")
-            raise Exception("Failed to generate follow-up questions due to an internal error.")
-
 
     # --- Annotation [services/neural.py: 35] ---
     # Method to update resume text (currently focused on skills).
