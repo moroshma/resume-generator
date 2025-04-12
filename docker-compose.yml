@@ -20,7 +20,7 @@ services:
     volumes:
       - ./tarantool_database/init:/opt/tarantool
       - ./tarantool_database/utils:/opt/tarantool/utils
-      - tarantool-data:/var/lib/tarantool     # новый том для данных
+      - tarantool-data:/var/lib/tarantool
     environment:
       - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua
     ports:

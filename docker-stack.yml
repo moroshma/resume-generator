@@ -1,0 +1,303 @@
+version: '3.8'
+
+services:
+  # Traefik - Edge Router
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.dashboard=true" # Включаем Dashboard (если еще не включен явно)
+      - "--api.insecure=true" # Разрешаем доступ к API/Dashboard по HTTP (для простоты)
+      - "--log.level=DEBUG" # Включаем DEBUG логи для отладки (можно потом убрать)
+      - "--providers.docker=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy" # Указываем сеть по умолчанию для Docker провайдера
+      - "--entrypoints.web.address=:80"
+      # - "--entrypoints.websecure.address=:443" # Для HTTPS
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host # Оставляем host, т.к. это edge router
+      - target: 8080 # Traefik API/Dashboard
+        published: 8080
+        protocol: tcp
+        # mode: ingress # Можно оставить ingress для Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # - traefik-letsencrypt:/letsencrypt # Если используете LetsEncrypt
+    networks:
+      - proxy
+    deploy:
+      replicas: 1 # Явно указываем 1 реплику
+#      placement:
+#        constraints:
+#          - node.role == manager # Должен работать на manager ноде
+      restart_policy:
+        condition: on-failure
+    logging: # Добавим логирование для Traefik
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Portainer - Docker Management UI
+  portainer:
+    image: portainer/portainer-ce:latest # Community Edition
+    command: -H unix:///var/run/docker.sock # Команда для подключения к Docker сокету
+    ports:
+      - target: 9443 # Порт Portainer по умолчанию (HTTPS)
+        published: 9443 # Публикуем на хосте
+        protocol: tcp
+        # mode: ingress (по умолчанию) - нормально для Portainer
+      # Можно использовать 9000 для HTTP, если не хотите настраивать HTTPS
+      # - target: 9000
+      #   published: 9000
+      #   protocol: tcp
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Доступ к Docker API
+      - portainer_data:/data # Том для сохранения данных Portainer
+    networks:
+      - proxy # Чтобы был в той же сети, хотя доступ по порту 9443
+    deploy:
+      replicas: 1
+#      placement:
+#        constraints:
+#          - node.role == manager # Должен работать на manager ноде для доступа к сокету
+      restart_policy:
+        condition: on-failure
+
+  # Tarantool - база данных для user-service
+  tarantool:
+    image: tarantool/tarantool:3 # Используем стандартный образ + Configs
+    configs: # Переносим сюда определение Configs
+      - source: tarantool_init_lua
+        target: /opt/tarantool/init.lua
+      - source: tarantool_utils_lua
+        target: /opt/tarantool/utils/utils.lua # Убедитесь, что путь в LUA_PATH соответствует
+    volumes:
+      - tarantool-data:/var/lib/tarantool
+    environment:
+      # Путь должен соответствовать target в configs
+      - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua;/opt/tarantool/utils/?.lua;;
+    command: tarantool /opt/tarantool/init.lua
+    networks:
+      - internal
+      - proxy # Нужна для связи с user-service, если он в proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      # Уберите constraint, если у вас одна нода или нет специальных меток
+      # placement:
+      #   constraints:
+      #     - node.labels.db == true
+      restart_policy:
+        condition: on-failure
+
+  # User Service
+  user-service:
+    image: qwikman/user-service:latest # Убедитесь, что этот образ существует и доступен
+    environment:
+      - DB_HOST=tarantool # Обращаемся по имени сервиса
+      - DB_PORT=3301      # Укажите порт явно, если нужно
+      - APP_ENV=prod
+    networks:
+      - proxy # Сеть для Traefik
+      - internal # Сеть для Tarantool
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        # Убедитесь, что сеть 'proxy' существует и Traefik ее слушает
+        - "traefik.docker.network=proxy"
+        # Роутер для user-service
+        - "traefik.http.routers.user-service.entrypoints=web" # Явно укажем entrypoint
+        - "traefik.http.routers.user-service.rule=PathPrefix(`/user_service`)"
+        # Мидлварь для удаления префикса
+        - "traefik.http.middlewares.strip-user-service.stripprefix.prefixes=/user_service"
+        # Привязка мидлвари к роутеру
+        - "traefik.http.routers.user-service.middlewares=strip-user-service"
+        # Сервис (бэкенд)
+        - "traefik.http.services.user-service.loadbalancer.server.port=8080" # Порт ВНУТРИ контейнера user-service
+
+  # AI Service
+  ai-service:
+    image: qwikman/ai-service:latest # Замените на ваш реальный образ
+    environment:
+      - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check
+      # Добавьте остальные переменные окружения или используйте секреты
+    networks:
+      - proxy
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=proxy"
+        - "traefik.http.routers.ai-service.entrypoints=web"
+        - "traefik.http.routers.ai-service.rule=PathPrefix(`/ai_service`)"
+        - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
+        - "traefik.http.routers.ai-service.middlewares=strip-ai-service"
+        - "traefik.http.services.ai-service.loadbalancer.server.port=8080" # Порт ВНУТРИ контейнера ai-service
+
+  # Minio Resume Service
+  minio-resume-service:
+    image: minio/minio:latest
+    command: server --console-address ":9001" /data/
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER_FILE=/run/secrets/minio_user
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+    secrets:
+      - minio_user
+      - minio_password
+    volumes:
+      - minio-storage:/data
+    networks:
+      - internal
+      - proxy # Если нужен доступ к консоли/API через Traefik или напрямую
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    deploy:
+      replicas: 1
+      # Уберите constraint, если не используете метки
+      # placement:
+      #   constraints:
+      #     - node.labels.storage == true
+      restart_policy:
+        condition: on-failure
+      labels: # Пример лейблов для доступа к Minio Console через Traefik
+        - "traefik.enable=true"
+        - "traefik.docker.network=proxy"
+        # Роутер для Minio Console (пример - доступ по поддомену)
+        - "traefik.http.routers.minio-console.rule=Host(`minio.localhost`)" # Замените на ваш домен или используйте PathPrefix
+        - "traefik.http.routers.minio-console.entrypoints=web"
+        - "traefik.http.routers.minio-console.service=minio-console-svc" # Имя сервиса Traefik
+        # Сервис для Minio Console
+        - "traefik.http.services.minio-console-svc.loadbalancer.server.port=9001" # Порт консоли внутри контейнера
+
+  # Postgres Resume Service
+  postgres-resume-service:
+    image: postgres:latest # Используем стандартный образ + Configs
+    configs: # Переносим сюда определение Configs
+      - source: postgres_init_sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_DB=resume_db
+    secrets:
+      - postgres_user
+      - postgres_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    deploy:
+      replicas: 1
+      # Уберите constraint, если не используете метки
+      # placement:
+      #   constraints:
+      #     - node.labels.db == true
+      restart_policy:
+        condition: on-failure
+
+  # Resume Storage Service
+  resume-storage:
+    image: qwikman/resume-storage:latest # Замените на ваш реальный образ
+    environment:
+      - APP_ENV=prod
+      - DB_HOST=postgres-resume-service
+      - DB_PORT=5432
+      - DB_USER_FILE=/run/secrets/postgres_user
+      - DB_PASSWORD_FILE=/run/secrets/postgres_password
+      - DB_NAME=resume_db
+      - MINIO_ENDPOINT=minio-resume-service:9000
+      - MINIO_ACCESS_KEY_FILE=/run/secrets/minio_user
+      - MINIO_SECRET_KEY_FILE=/run/secrets/minio_password
+      - MINIO_BUCKET=resumes
+      - MINIO_USE_SSL=false
+    secrets:
+      - postgres_user
+      - postgres_password
+      - minio_user
+      - minio_password
+    networks:
+      - proxy
+      - internal
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=proxy"
+        - "traefik.http.routers.resume-storage.entrypoints=web"
+        - "traefik.http.routers.resume-storage.rule=PathPrefix(`/resume_storage`)"
+        - "traefik.http.middlewares.strip-resume-service.stripprefix.prefixes=/resume_storage"
+        - "traefik.http.routers.resume-storage.middlewares=strip-resume-service"
+        - "traefik.http.services.resume-storage.loadbalancer.server.port=8080" # Порт ВНУТРИ контейнера resume-storage
+
+# Определяем сети
+networks:
+  proxy:
+    driver: overlay
+    attachable: true # Полезно для отладки
+  internal:
+    driver: overlay
+    # internal: true # Можно сделать true, если не нужен доступ из proxy сети
+
+# Определяем тома
+volumes:
+  minio-storage:
+  postgres-data:
+  tarantool-data:
+  portainer_data: # Добавляем том для Portainer
+  # traefik-letsencrypt:
+
+# Определяем секреты (должны быть созданы заранее)
+secrets:
+  minio_user:
+    external: true
+  minio_password:
+    external: true
+  postgres_user:
+    external: true
+  postgres_password:
+    external: true
+  # jwt_access_key:
+  #   external: true
+  # jwt_refresh_key:
+  #   external: true
+  # ai_api_key:
+  #   external: true
+
+# Определяем конфиги (файлы должны существовать локально при деплое)
+configs:
+  tarantool_init_lua:
+    file: ./tarantool_database/init/init.lua
+  tarantool_utils_lua: # Убедитесь, что файл utils.lua существует
+    file: ./tarantool_database/utils/utils.lua
+  postgres_init_sql:
+    file: ./resume_storage/migrate/init.sql
