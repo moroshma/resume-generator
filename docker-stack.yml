@@ -108,7 +108,7 @@ services:
       - proxy # Сеть для Traefik
       - internal # Сеть для Tarantool
     deploy:
-      replicas: 1
+      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
@@ -117,7 +117,7 @@ services:
       labels:
         - "traefik.enable=true"
         # Убедитесь, что сеть 'proxy' существует и Traefik ее слушает
-        - "traefik.docker.network=proxy"
+        - "traefik.docker.network=resumeapp_proxy"
         # Роутер для user-service
         - "traefik.http.routers.user-service.entrypoints=web" # Явно укажем entrypoint
         - "traefik.http.routers.user-service.rule=PathPrefix(`/user_service`)"
@@ -137,7 +137,7 @@ services:
     networks:
       - proxy
     deploy:
-      replicas: 1
+      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
@@ -145,7 +145,7 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=proxy"
+        - "traefik.docker.network=resumeapp_proxy"
         - "traefik.http.routers.ai-service.entrypoints=web"
         - "traefik.http.routers.ai-service.rule=PathPrefix(`/ai_service`)"
         - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
@@ -234,7 +234,7 @@ services:
       - proxy
       - internal
     deploy:
-      replicas: 1
+      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
@@ -242,7 +242,7 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=proxy"
+        - "traefik.docker.network=resumeapp_proxy"
         - "traefik.http.routers.resume-storage.entrypoints=web"
         - "traefik.http.routers.resume-storage.rule=PathPrefix(`/resume_storage`)"
         - "traefik.http.middlewares.strip-resume-service.stripprefix.prefixes=/resume_storage"
