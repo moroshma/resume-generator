@@ -23,8 +23,6 @@ services:
       - tarantool-data:/var/lib/tarantool
     environment:
       - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua
-    ports:
-      - "3301:3301"
     command: tarantool /opt/tarantool/init.lua
     logging:
       driver: "json-file"
@@ -101,8 +99,8 @@ services:
 
   resume-storage:
     build:
-      context: .
-      dockerfile: ./resume_storage/Dockerfile
+      context: ./resume_storage
+      dockerfile: Dockerfile
     environment:
       - APP_ENV=prod
     depends_on:
