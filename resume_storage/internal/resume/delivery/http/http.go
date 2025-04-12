@@ -33,7 +33,7 @@ func NewResumeHandler(resumeUseCase ResumeUseCase) *ResumeHandler {
 
 func NewResumeRoutes(r *chi.Mux, resumeUseCase ResumeUseCase, cfg *config.UserService) {
 	resumeHandler := NewResumeHandler(resumeUseCase)
-	r.With(middleware.AuthMiddleware(cfg.AuthService.Host+":"+cfg.AuthService.Port)).Route("/api/v001/users", func(r chi.Router) {
+	r.With(middleware.AuthMiddleware(cfg.AuthService.Host)).Route("/api/v001/users", func(r chi.Router) {
 		r.Post("/resume", resumeHandler.CreateResume)
 		r.Delete("/resume/{id}", resumeHandler.DeleteResumeByID)
 		r.Get("/resume/{id}", resumeHandler.GetResumeByID)

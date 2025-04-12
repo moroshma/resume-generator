@@ -26,7 +26,6 @@ type UserService struct {
 
 	AuthService struct {
 		Host string `yaml:"host" env:"AUTH_SERVICE_HOST"`
-		Port string `yaml:"port" env:"AUTH_SERVICE_PORT"`
 	} `yaml:"auth_service"`
 }
 
