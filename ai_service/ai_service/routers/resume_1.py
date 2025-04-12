@@ -141,7 +141,7 @@ async def generate_resume_final(user_answers: UserAnswers = Body(...)):
 # Define the endpoint to update an existing section.
 # Uses POST, takes 'UpdateRequest' schema in the body.
 # Returns 'UpdatedSkillsResponse' schema.
-@router.post("api/v001/resume/label/regenerate", response_model=UpdatedSkillsResponse)
+@router.post("/api/v001/resume/label/regenerate", response_model=UpdatedSkillsResponse)
 async def update_resume_section(update_req: UpdateRequest = Body(...)):
     """
     Updates an existing resume section (e.g., hard skills) by integrating new information.

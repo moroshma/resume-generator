@@ -37,7 +37,7 @@ class NeuralService:
         # --- Annotation [services/neural.py: 7] ---
         # Define the payload for the LLM API request according to its documentation.
         data = {
-            "model": "deepseek/deepseek-coder", # Consider model choice based on task (coder good for JSON/instructions)
+            "model": "deepseek/ddeepseek-r1-zero:free", # Consider model choice based on task (coder good for JSON/instructions)
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
