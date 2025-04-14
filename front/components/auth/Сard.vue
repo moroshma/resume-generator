@@ -15,6 +15,12 @@
         >
           Войти
         </button>
+        <transition name="scroll">
+          <div v-if="error" class="error-message">
+            {{ error }}
+          </div>
+        </transition>
+
         <button class="switch-btn" @click="switchForm('register')">
           Нет аккаунта? Зарегистрироваться →
         </button>
@@ -34,6 +40,12 @@
         >
           Создать аккаунт
         </button>
+        <transition name="scroll">
+          <div v-if="error" class="error-message">
+            {{ error }}
+          </div>
+        </transition>
+
         <button class="switch-btn" @click="switchForm('login')">
           Уже есть аккаунт? Войти →
         </button>
@@ -48,6 +60,7 @@ const props = defineProps({
     type: String,
     default: "login",
   },
+  error: String,
 });
 
 const userAuth = ref({
@@ -63,6 +76,44 @@ const switchForm = (type) => {
 </script>
 
 <style scoped>
+.scroll-enter-active,
+.scroll-leave-active {
+  transition: max-height 0.5s ease-in-out, opacity 0.3s ease 0.2s;
+  max-height: 100px;
+  overflow: hidden;
+}
+
+.scroll-enter-from,
+.scroll-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin: 15px 0;
+  border: 1px solid #fecaca;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.error-message::before {
+  content: "!";
+  background: #dc2626;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
 .auth-card {
   position: relative;
   width: 400px;
@@ -131,6 +182,7 @@ input:focus {
 }
 
 .primary-btn {
+  justify-content: center;
   background: #3498db;
   color: white;
   padding: 12px;

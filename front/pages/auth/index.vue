@@ -2,6 +2,7 @@
   <div class="auth-page">
     <div class="auth-container">
       <AuthСard
+        :error="errorMessage"
         :form-type="activeForm"
         @switch-form="handleFormSwitch"
         @submit="auth"
@@ -17,6 +18,7 @@ definePageMeta({
   layout: "auth",
 });
 
+const errorMessage = ref("");
 const activeForm = ref("login");
 
 const auth = async (userAuthData) => {
@@ -24,14 +26,23 @@ const auth = async (userAuthData) => {
   const { login: loginData, password, type } = userAuthData;
   let response;
 
-  if (type === "login") {
-    response = await login(loginData, password);
-  } else if (type === "register") {
-    response = await register(loginData, password);
-  }
-  let status = response.status;
-  if (status === 200 || status === 201) {
-    navigateTo("/home");
+  try {
+    if (type === "login") {
+      response = await login(loginData, password);
+    } else if (type === "register") {
+      response = await register(loginData, password);
+    }
+    let status = response.status;
+    if (status === 200 || status === 201) {
+      navigateTo("/home");
+    }
+  } catch (error) {
+    console.log(error.status, "err");
+    if (error.status === 401) {
+      errorMessage.value = "Неверно введен логин или пароль.";
+    } else if (error.status === 409) {
+      errorMessage.value = "Пользователь с таким именем уже существует.";
+    }
   }
 };
 
