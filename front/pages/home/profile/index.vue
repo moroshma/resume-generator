@@ -6,11 +6,17 @@
       <div class="header">
         <h1 class="title">
           <div class="name-fields">
-            <EditableField v-model="data.name" label="Имя" class="name-field" />
+            <EditableField
+              v-model="data.name"
+              label="Имя"
+              class="name-field"
+              placeholder="Имя"
+            />
             <EditableField
               v-model="data.surname"
               label="Фамилия"
               class="name-field"
+              placeholder="Фамилия"
             />
           </div>
         </h1>
@@ -141,16 +147,23 @@ const defaultData = () => ({
 });
 
 const { data, pending, error } = useFetch("/api/user", {
-  // Инициализируем данные по умолчанию
   default: defaultData,
-  // Автоматически обновляем реактивную структуру
   transform: (input) => ({
     ...defaultData(),
     ...input,
   }),
 });
 
-// Инициализация языков
+watch(
+  () => data.value,
+  (newVal) => {
+    if (!pending.value) {
+      console.log(newVal, "newVal");
+    }
+  },
+  { deep: true, immediate: false }
+);
+
 const languageNames = computed(() => {
   return data.value.languages?.map((lang) => lang.language) || [];
 });
@@ -162,7 +175,6 @@ function updateLanguages(langs) {
   }));
 }
 
-// Education Methods
 const addEducation = () => {
   data.value.education.push({
     institution: "",
@@ -176,7 +188,6 @@ const removeEducation = (index) => {
   data.value.education.splice(index, 1);
 };
 
-// Experience Methods
 const addExperience = () => {
   data.value.experience.push({
     company: "",
@@ -361,7 +372,6 @@ const removeExperience = (index) => {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-/* Адаптация для textarea */
 .edit-mode[data-type="textarea"] {
   min-height: 100px;
   resize: vertical;
