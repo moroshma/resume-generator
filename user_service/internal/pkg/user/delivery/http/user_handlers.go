@@ -50,7 +50,7 @@ func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
 
 	user, err := handlers.userUseCase.GetUserInfo(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNoContent)
 		return
 	}
 
