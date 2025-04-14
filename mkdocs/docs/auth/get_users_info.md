@@ -74,18 +74,13 @@
 }
 ```
 
+??? success "Статус 204 — нет данных"
+
+
 ??? warning "Статус 400 — Ошибка валидации"
 
 ```json
 {
   "error": "validate error"
-}
-```
-
-??? warning "Статус 409 — Пользователь с таким email уже существует"
-
-```json
-{
-  "error": "User already exists"
 }
 ```
