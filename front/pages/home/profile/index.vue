@@ -125,20 +125,42 @@ definePageMeta({
   private: true,
 });
 
-const { data, status, error } = useFetch("/api/user");
+// Инициализация структуры данных по умолчанию
+const defaultData = () => ({
+  name: "",
+  surname: "",
+  email: "",
+  phone_number: "",
+  education: [],
+  experience: [],
+  social_profiles: {
+    linkedin: "",
+    telegram: "",
+  },
+  languages: [],
+});
 
-console.log(data.value, status, error);
+const { data, pending, error } = useFetch("/api/user", {
+  // Инициализируем данные по умолчанию
+  default: defaultData,
+  // Автоматически обновляем реактивную структуру
+  transform: (input) => ({
+    ...defaultData(),
+    ...input,
+  }),
+});
+
+// Инициализация языков
+const languageNames = computed(() => {
+  return data.value.languages?.map((lang) => lang.language) || [];
+});
 
 function updateLanguages(langs) {
-  console.log(langs, "langs");
-  data.value.languages = data.value.languages.filter((l) =>
-    langs.includes(l.language)
-  );
+  data.value.languages = langs.map((language) => ({
+    language,
+    ...data.value.languages.find((l) => l.language === language),
+  }));
 }
-
-const languageNames = computed(() =>
-  data.value.languages.map((lang) => lang.language)
-);
 
 // Education Methods
 const addEducation = () => {
