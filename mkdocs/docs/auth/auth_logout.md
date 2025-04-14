@@ -5,7 +5,7 @@
 ### Request
 
 ```http
-    GET | api/v001/auth/logout
+    DELETE | api/v001/auth/logout
 ```
 
 
