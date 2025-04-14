@@ -134,7 +134,7 @@ func (handlers *authHandlers) logOut(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // generateAccessTokenByRefreshToken generates a new access token using the provided refresh token.
