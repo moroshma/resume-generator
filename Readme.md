@@ -12,3 +12,10 @@ ip addr:
 ipconfig getifaddr en0
 
 don't forget open ports and add .env file
+
+
+for local dev
+
+docker swarm init
+
+docker stack deploy -c docker-stack.yml resumeapp
