@@ -126,81 +126,31 @@
 </template>
 
 <script setup>
+import { useProfile } from "~/composables/user/useProfile";
+
 definePageMeta({
   layout: "home-layout",
   private: true,
 });
 
-// Инициализация структуры данных по умолчанию
-const defaultData = () => ({
-  name: "",
-  surname: "",
-  email: "",
-  phone_number: "",
-  education: [],
-  experience: [],
-  social_profiles: {
-    linkedin: "",
-    telegram: "",
-  },
-  languages: [],
-});
+const {
+  data,
+  pending,
 
-const { data, pending, error } = useFetch("/api/user", {
-  default: defaultData,
-  transform: (input) => ({
-    ...defaultData(),
-    ...input,
-  }),
-});
+  isSaving,
+  lastSaved,
+  saveError,
 
-watch(
-  () => data.value,
-  (newVal) => {
-    if (!pending.value) {
-      console.log(newVal, "newVal");
-    }
-  },
-  { deep: true, immediate: false }
+  addEducation,
+  removeEducation,
+  addExperience,
+  removeExperience,
+  updateLanguages,
+} = useProfile();
+
+const languageNames = computed(() =>
+  data.value.languages.map((lang) => lang.language)
 );
-
-const languageNames = computed(() => {
-  return data.value.languages?.map((lang) => lang.language) || [];
-});
-
-function updateLanguages(langs) {
-  data.value.languages = langs.map((language) => ({
-    language,
-    ...data.value.languages.find((l) => l.language === language),
-  }));
-}
-
-const addEducation = () => {
-  data.value.education.push({
-    institution: "",
-    degree: "",
-    from: "",
-    to: "",
-  });
-};
-
-const removeEducation = (index) => {
-  data.value.education.splice(index, 1);
-};
-
-const addExperience = () => {
-  data.value.experience.push({
-    company: "",
-    role: "",
-    from: "",
-    to: "",
-    description: "",
-  });
-};
-
-const removeExperience = (index) => {
-  data.value.experience.splice(index, 1);
-};
 </script>
 
 <style scoped>

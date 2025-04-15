@@ -53,16 +53,20 @@ export const useProfile = () => {
   const lastSaved = ref<Date | null>(null);
   const saveError = ref<string | null>(null);
 
-  const { pending } = useFetch("/api/user", {
+  const { error, status } = useFetch("/api/user", {
     default: defaultData,
     transform: (input: any) => ({
       ...defaultData(),
       ...input,
     }),
     onResponse: ({ response }) => {
-      if (response.ok) data.value = response._data;
+      if (response.ok && (response._data as ProfileData))
+        data.value = response._data;
     },
+    lazy: true,
   });
+
+  const pending = computed(() => status.value === "pending");
 
   const debounce = <T extends (...args: any[]) => void>(
     fn: T,
