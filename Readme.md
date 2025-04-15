@@ -19,3 +19,6 @@ for local dev
 docker swarm init
 
 docker stack deploy -c docker-stack.yml resumeapp
+
+down stack
+docker stack rm resumeapp
