@@ -24,8 +24,7 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 FROM node:18-alpine AS prod
 
 WORKDIR /app
-COPY --from=builder /app/.output ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.output/ ./output/
 
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
@@ -33,4 +32,4 @@ ENV PORT=80
 ENV BASE_HOST=http://traefik:80
 
 EXPOSE 80
-CMD ["node", ".output/server/index.mjs"]
+CMD ["node", "output/server/index.mjs"]
