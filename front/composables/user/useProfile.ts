@@ -52,6 +52,7 @@ export const useProfile = () => {
   const isSaving = ref(false);
   const lastSaved = ref<Date | null>(null);
   const saveError = ref<string | null>(null);
+  const profileCreated = ref(false);
 
   const { error, status } = useFetch("/api/user", {
     default: defaultData,
@@ -60,6 +61,7 @@ export const useProfile = () => {
       ...input,
     }),
     onResponse: ({ response }) => {
+      profileCreated.value = !!(response._data as ProfileData);
       if (response.ok && (response._data as ProfileData))
         data.value = response._data;
     },
@@ -83,11 +85,24 @@ export const useProfile = () => {
     try {
       isSaving.value = true;
       saveError.value = null;
+      let newProfile: ProfileData;
+      console.log(profileCreated.value);
 
-      await $fetch("/api/user", {
-        method: "PUT",
-        body: data.value,
-      });
+      if (!profileCreated.value) {
+        await $fetch("/api/user", {
+          method: "POST",
+          body: data.value,
+        });
+        newProfile = await $fetch("/api/user");
+      } else {
+        newProfile = await $fetch("/api/user", {
+          method: "PUT",
+          body: data.value,
+        });
+      }
+      console.log(newProfile, "newProfile");
+
+      if (!!(newProfile as ProfileData)) data.value = newProfile;
 
       lastSaved.value = new Date();
     } catch (error) {
