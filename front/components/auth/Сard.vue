@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-card">
+  <form class="auth-card" @submit.prevent>
     <div class="forms-container" :class="formType">
       <div class="form login-form">
         <h2>Вход</h2>
@@ -10,6 +10,7 @@
           placeholder="Пароль"
         />
         <button
+          type="submit"
           class="primary-btn"
           @click="emit('submit', { ...userAuth, type: 'login' })"
         >
@@ -35,6 +36,7 @@
           placeholder="Пароль"
         />
         <button
+          type="submit"
           class="primary-btn"
           @click="emit('submit', { ...userAuth, type: 'register' })"
         >
@@ -51,7 +53,7 @@
         </button>
       </div>
     </div>
-  </div>
+  </form>
 </template>
 
 <script setup>
