@@ -1,32 +1,4 @@
 services:
-  nuxt-frontend:
-    build:
-      context: ./front # Путь к вашей папке с Nuxt проектом
-      dockerfile: Dockerfile
-    environment:
-      NUXT_PUBLIC_API_URL: /api # Базовый путь для API
-      NUXT_APP_ENV: production
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nuxt-frontend.rule=PathPrefix(`/`)"
-      - "traefik.http.services.nuxt-frontend.loadbalancer.server.port=3000"
-      - "traefik.http.routers.nuxt-frontend.middlewares=nuxt-errors@docker"
-    depends_on:
-      - user-service
-      - ai-service
-      - resume-storage
-    restart: unless-stopped
-
-  # Добавляем middleware для обработки ошибок
-  nuxt-errors:
-    image: traefik:v2.10
-    command:
-      - --entrypoints.web.address=:80
-      - --providers.docker
-    labels:
-      - "traefik.http.middlewares.nuxt-errors.errors.status=400-599"
-      - "traefik.http.middlewares.nuxt-errors.errors.service=nuxt-frontend"
-      - "traefik.http.middlewares.nuxt-errors.errors.query=/500" # Кастомная страница ошибок
   traefik:
     image: traefik:v2.10
     command:
