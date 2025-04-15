@@ -10,7 +10,10 @@ export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: false },
   runtimeConfig: {
-    BASE_HOST: process.env.BASE_HOST || "http://traefik:80",
+    BASE_HOST:
+      process.env.BASE_HOST || process.env.NODE_ENV === "production"
+        ? "http://traefik:80"
+        : "http://localhost:80",
     public: {},
   },
   app: {
