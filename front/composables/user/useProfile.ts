@@ -85,7 +85,7 @@ export const useProfile = () => {
       saveError.value = null;
 
       await $fetch("/api/user", {
-        method: "POST",
+        method: "PUT",
         body: data.value,
       });
 

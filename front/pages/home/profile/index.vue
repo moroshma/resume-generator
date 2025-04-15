@@ -1,7 +1,6 @@
 <template>
   <div class="profile-card">
     <div class="card-border"></div>
-
     <div class="content">
       <div class="header">
         <h1 class="title">
