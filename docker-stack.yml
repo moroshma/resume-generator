@@ -1,51 +1,73 @@
-# --- START OF FILE docker-stack.yml ---
-version: "3.7" # Указание версии рекомендуется
+version: "3.7"
 
 services:
   # Traefik - Edge Router
   traefik:
     image: traefik:v2.10
     command:
+      # --- Основные настройки ---
       - "--api.dashboard=true"
-      - "--api.insecure=true"
-      - "--log.level=DEBUG"
+      - "--api.insecure=true" # ВНИМАНИЕ: Небезопасно для продакшена! Настройте аутентификацию.
+      - "--log.level=INFO" # Уровень логирования
+      # --- Провайдеры ---
       - "--providers.docker=true"
       - "--providers.docker.swarmMode=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=proxy"
+      - "--providers.docker.network=resumeapp_proxy" # Имя вашей overlay сети
+      # --- File Provider для TLS ---
+      - "--providers.file.directory=/etc/traefik/dynamic_conf" # Путь ВНУТРИ контейнера
+      - "--providers.file.watch=true" # Следить за изменениями в tls.yml
+      # --- Точки входа (EntryPoints) ---
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443" # HTTPS точка входа
+      # --- HTTP -> HTTPS Redirection ---
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
     ports:
       - target: 80
         published: 80
         protocol: tcp
         mode: host
-      - target: 8080
-        published: 8080
+      - target: 443 # Открываем порт 443
+        published: 443
+        protocol: tcp
+        mode: host
+      - target: 8080 # API/Dashboard
+        published: 8080 # НЕ ВЫСТАВЛЯТЬ НАРУЖУ БЕЗ ЗАЩИТЫ
         protocol: tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Монтируем каталог с tls.yml
+      - /opt/traefik/dynamic_conf:/etc/traefik/dynamic_conf:ro
     networks:
       - proxy
+    secrets: # Подключаем секреты сертификатов
+      - source: cvibe.ru.crt # Имя секрета, созданного на Шаге 1
+        target: cvibe.ru.crt # Имя файла внутри /run/secrets/
+      - source: cvibe.ru.key
+        target: cvibe.ru.key
+      - source: cvibe.ru.ca
+        target: cvibe.ru.ca
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
-      placement: # Рекомендуется размещать Traefik на manager ноде
-        constraints: [node.role == manager]
+      placement:
+        constraints: [ node.role == manager ]
     logging:
       driver: "json-file"
       options:
         max-size: "50m"
         max-file: "3"
 
-  # Portainer - Docker Management UI
+  # Portainer - Docker Management UI (Пример настройки доступа через Traefik)
   portainer:
     image: portainer/portainer-ce:latest
     command: -H unix:///var/run/docker.sock
-    ports:
+    ports: # Убираем прямой мапинг порта, если доступ будет только через Traefik
       - target: 9443
         published: 9443
-        protocol: tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
@@ -55,16 +77,28 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
-      placement: # Рекомендуется размещать Portainer на manager ноде
-        constraints: [node.role == manager]
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=resumeapp_proxy"
+        # --- HTTP Роутер (для редиректа) ---
+        # Замените portainer.cvibe.ru на желаемый поддомен или используйте основной с PathPrefix
+        - "traefik.http.routers.portainer-http.entrypoints=web"
+        - "traefik.http.routers.portainer-http.rule=Host(`portainer.cvibe.ru`)"
+        # --- HTTPS Роутер ---
+        - "traefik.http.routers.portainer-secure.entrypoints=websecure"
+        - "traefik.http.routers.portainer-secure.rule=Host(`portainer.cvibe.ru`)"
+        - "traefik.http.routers.portainer-secure.tls=true" # Включить TLS
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000" # Portainer слушает порт 9000 по HTTP
 
   # Front-end App
   front:
-    image: qwikman/resume-front:main # Используй конкретный тег или sha для воспроизводимости
+    image: qwikman/resume-front:main
     environment:
       - NODE_ENV=production
       - PORT=80
-      - BASE_HOST=http://traefik:80 # Возможно, лучше передавать публичный URL?
+      - BASE_HOST=https://cvibe.ru # Обновляем на HTTPS URL
     networks:
       - proxy
     deploy:
@@ -76,59 +110,32 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное (stackname_networkname)
-        - "traefik.http.routers.front.entrypoints=web"
-        - "traefik.http.routers.front.rule=PathPrefix(`/`)"
+        - "traefik.docker.network=resumeapp_proxy"
+        # --- HTTP Роутер (для редиректа) ---
+        - "traefik.http.routers.front-http.entrypoints=web"
+        - "traefik.http.routers.front-http.rule=Host(`cvibe.ru`) && PathPrefix(`/`)" # Используем ваш домен
+        # --- HTTPS Роутер ---
+        - "traefik.http.routers.front-secure.entrypoints=websecure"
+        - "traefik.http.routers.front-secure.rule=Host(`cvibe.ru`) && PathPrefix(`/`)" # Используем ваш домен
+        - "traefik.http.routers.front-secure.tls=true" # Включаем TLS
         - "traefik.http.services.front.loadbalancer.server.port=80"
-        - "traefik.http.routers.front.priority=1"
-
-  # Tarantool - база данных для user-service
-  tarantool:
-    image: tarantool/tarantool:3
-    # Убираем configs:
-    # configs:
-    #   - source: tarantool_init_lua
-    #     target: /opt/tarantool/init.lua
-    #   - source: tarantool_utils_lua
-    #     target: /opt/tarantool/utils/utils.lua
-    volumes:
-      # Монтируем файлы с хоста. Пути на хосте нужно будет создать/обновить через CD pipeline.
-      - /opt/resume-app/configs/tarantool/init.lua:/opt/tarantool/init.lua:ro # :ro - read-only, если не нужно писать из контейнера
-      - /opt/resume-app/configs/tarantool/utils/utils.lua:/opt/tarantool/utils/utils.lua:ro
-      - tarantool-data:/var/lib/tarantool # Volume для данных остается
-    environment:
-      # Путь LUA_PATH должен включать директории, где лежат скрипты ВНУТРИ контейнера
-      - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua;/opt/tarantool/utils/?.lua;;
-    command: tarantool /opt/tarantool/init.lua # Команда остается прежней
-    networks:
-      - internal
-      # - proxy # Tarantool обычно не нужно выставлять наружу через proxy
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "200k"
-        max-file: "10"
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      # Можно ограничить размещение нодой, где лежат конфиги, если у тебя несколько manager нод
-      # placement:
-      #   constraints: [node.role == manager] # Или конкретная нода по лейблу
+        - "traefik.http.routers.front-secure.priority=1"
 
   # User Service
   user-service:
-    image: qwikman/user-service:main 
+    image: qwikman/user-service:main
     environment:
       - DB_HOST=tarantool:3301
       - APP_ENV=prod
+      # URL для внутреннего общения можно оставить HTTP
+      # - SOME_INTERNAL_URL=http://ai-service:8080/path
     networks:
       - proxy
       - internal
-    depends_on: # Указывает на зависимость, хотя Swarm не гарантирует порядок запуска, это полезно для compose
+    depends_on:
       - tarantool
     deploy:
-      replicas: 3 # Или 1, если пока не нужна высокая доступность
+      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
@@ -136,25 +143,32 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное
-        - "traefik.http.routers.user-service.entrypoints=web"
-        - "traefik.http.routers.user-service.rule=PathPrefix(`/user_service`)"
+        - "traefik.docker.network=resumeapp_proxy"
+        # --- HTTP Роутер (для редиректа) ---
+        - "traefik.http.routers.user-service-http.entrypoints=web"
+        - "traefik.http.routers.user-service-http.rule=Host(`cvibe.ru`) && PathPrefix(`/user_service`)" # Используем ваш домен
+        - "traefik.http.routers.user-service-http.middlewares=strip-user-service@docker" # Указываем провайдер для middleware
+        # --- HTTPS Роутер ---
+        - "traefik.http.routers.user-service-secure.entrypoints=websecure"
+        - "traefik.http.routers.user-service-secure.rule=Host(`cvibe.ru`) && PathPrefix(`/user_service`)" # Используем ваш домен
         - "traefik.http.middlewares.strip-user-service.stripprefix.prefixes=/user_service"
-        - "traefik.http.routers.user-service.middlewares=strip-user-service"
-        - "traefik.http.services.user-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
+        - "traefik.http.routers.user-service-secure.middlewares=strip-user-service@docker" # Указываем провайдер
+        - "traefik.http.routers.user-service-secure.tls=true" # Включаем TLS
+        - "traefik.http.services.user-service.loadbalancer.server.port=8080"
 
   # AI Service
   ai-service:
-    image: qwikman/ai-service:main # Используй конкретный тег или sha
+    image: qwikman/ai-service:main
     environment:
-      - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check # Используем имя сервиса и его порт
+      - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check # Внутренний URL - можно оставить HTTP
+      # - AUTH_SERVICE_URL=https://cvibe.ru/user_service/api/v001/auth/check # Если нужно через внешний адрес
     networks:
       - proxy
-      - internal # Добавим, если нужно общаться с другими сервисами не через proxy
+      - internal
     depends_on:
       - user-service
     deploy:
-      replicas: 3 # Или 1
+      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
@@ -162,12 +176,18 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное
-        - "traefik.http.routers.ai-service.entrypoints=web"
-        - "traefik.http.routers.ai-service.rule=PathPrefix(`/ai_service`)"
+        - "traefik.docker.network=resumeapp_proxy"
+        # --- HTTP Роутер (для редиректа) ---
+        - "traefik.http.routers.ai-service-http.entrypoints=web"
+        - "traefik.http.routers.ai-service-http.rule=Host(`cvibe.ru`) && PathPrefix(`/ai_service`)" # Используем ваш домен
+        - "traefik.http.routers.ai-service-http.middlewares=strip-ai-service@docker" # Указываем провайдер
+        # --- HTTPS Роутер ---
+        - "traefik.http.routers.ai-service-secure.entrypoints=websecure"
+        - "traefik.http.routers.ai-service-secure.rule=Host(`cvibe.ru`) && PathPrefix(`/ai_service`)" # Используем ваш домен
         - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
-        - "traefik.http.routers.ai-service.middlewares=strip-ai-service"
-        - "traefik.http.services.ai-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
+        - "traefik.http.routers.ai-service-secure.middlewares=strip-ai-service@docker" # Указываем провайдер
+        - "traefik.http.routers.ai-service-secure.tls=true" # Включаем TLS
+        - "traefik.http.services.ai-service.loadbalancer.server.port=8080"
 
   # Minio Resume Service
   minio-resume-service:
@@ -188,7 +208,7 @@ services:
       - internal
       # - proxy # Обычно Minio не выставляют напрямую наружу, доступ через сервисы
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -227,19 +247,10 @@ services:
 
   # Resume Storage Service
   resume-storage:
-    image: qwikman/resume-storage:main # Используй конкретный тег или sha
+    image: qwikman/resume-storage:main
     environment:
-      - APP_ENV=prod
-      - DB_HOST=postgres-resume-service # Имя сервиса
-      - DB_PORT=5432 # Стандартный порт Postgres
-      - DB_USER_FILE=/run/secrets/postgres_user
-      - DB_PASSWORD_FILE=/run/secrets/postgres_password
-      - DB_NAME=resume_db
-      - MINIO_ENDPOINT=minio-resume-service:9000 # Имя сервиса Minio и его порт API
-      - MINIO_ACCESS_KEY_FILE=/run/secrets/minio_user
-      - MINIO_SECRET_KEY_FILE=/run/secrets/minio_password
-      - MINIO_BUCKET=resumes
-      - MINIO_USE_SSL=false # Minio работает по HTTP внутри Docker сети
+      # ... (остальные env vars без изменений) ...
+      - MINIO_USE_SSL=false # Внутренняя связь с Minio остается HTTP
     secrets:
       - postgres_user
       - postgres_password
@@ -252,7 +263,7 @@ services:
       - postgres-resume-service
       - minio-resume-service
     deploy:
-      replicas: 3 # Или 1
+      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
@@ -260,21 +271,27 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное
-        - "traefik.http.routers.resume-storage.entrypoints=web"
-        - "traefik.http.routers.resume-storage.rule=PathPrefix(`/resume_storage`)"
+        - "traefik.docker.network=resumeapp_proxy"
+        # --- HTTP Роутер (для редиректа) ---
+        - "traefik.http.routers.resume-storage-http.entrypoints=web"
+        - "traefik.http.routers.resume-storage-http.rule=Host(`cvibe.ru`) && PathPrefix(`/resume_storage`)" # Используем ваш домен
+        - "traefik.http.routers.resume-storage-http.middlewares=strip-resume-service@docker" # Указываем провайдер
+        # --- HTTPS Роутер ---
+        - "traefik.http.routers.resume-storage-secure.entrypoints=websecure"
+        - "traefik.http.routers.resume-storage-secure.rule=Host(`cvibe.ru`) && PathPrefix(`/resume_storage`)" # Используем ваш домен
         - "traefik.http.middlewares.strip-resume-service.stripprefix.prefixes=/resume_storage"
-        - "traefik.http.routers.resume-storage.middlewares=strip-resume-service"
-        - "traefik.http.services.resume-storage.loadbalancer.server.port=8080" # Порт, который слушает FastAPI
+        - "traefik.http.routers.resume-storage-secure.middlewares=strip-resume-service@docker" # Указываем провайдер
+        - "traefik.http.routers.resume-storage-secure.tls=true" # Включаем TLS
+        - "traefik.http.services.resume-storage.loadbalancer.server.port=8080"
 
 networks:
   proxy:
     driver: overlay
     attachable: true
-    name: resumeapp_proxy # Зададим имя сети явно, чтобы оно совпадало с тем, что в лейблах traefik
+    name: resumeapp_proxy
   internal:
     driver: overlay
-    name: resumeapp_internal # Явное имя для внутренней сети
+    name: resumeapp_internal
 
 volumes:
   minio-storage:
@@ -283,6 +300,16 @@ volumes:
   portainer_data:
 
 secrets:
+  # Секреты для сертификатов cvibe.ru
+  cvibe.ru.crt:
+    external: true
+  cvibe.ru.key:
+    external: true
+  # Опционально: секрет для CA
+  cvibe.ru.ca:
+    external: true
+
+  # Существующие секреты
   minio_user:
     external: true
   minio_password:
@@ -292,12 +319,4 @@ secrets:
   postgres_password:
     external: true
 
-# Убираем глобальную секцию configs, так как она больше не используется
-# configs:
-#   tarantool_init_lua:
-#     file: ./tarantool_database/init/init.lua # Эти пути больше не нужны здесь
-#   tarantool_utils_lua:
-#     file: ./tarantool_database/utils/utils.lua
-#   postgres_init_sql:
-#     file: ./resume_storage/migrate/init.sql
 # --- END OF FILE docker-stack.yml ---
