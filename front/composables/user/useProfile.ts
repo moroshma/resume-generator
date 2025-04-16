@@ -86,7 +86,6 @@ export const useProfile = () => {
       isSaving.value = true;
       saveError.value = null;
       let newProfile: ProfileData;
-      console.log(profileCreated.value);
 
       if (!profileCreated.value) {
         await $fetch("/api/user", {
@@ -100,7 +99,6 @@ export const useProfile = () => {
           body: data.value,
         });
       }
-      console.log(newProfile, "newProfile");
 
       if (!!(newProfile as ProfileData)) data.value = newProfile;
 

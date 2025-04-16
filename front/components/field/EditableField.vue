@@ -2,28 +2,25 @@
   <div class="editable-field" @dblclick="enableEdit">
     <div v-if="!isEditing" class="view-mode">
       <span v-if="icon" class="icon">{{ icon }}</span>
-      {{ modelValue || placeholder }}
+      {{ model || placeholder }}
     </div>
     <component
       v-else
       :is="inputComponent"
       ref="inputRef"
       v-model="localValue"
-      :value="localValue"
       :type="type"
       :placeholder="placeholder"
       @blur="saveChanges"
       @keyup.enter="saveChanges"
       class="edit-mode"
+      @input="handleInput"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from "vue";
-
 const props = defineProps({
-  modelValue: [String, Number],
   label: String,
   type: {
     type: String,
@@ -33,15 +30,19 @@ const props = defineProps({
   placeholder: String,
 });
 
-const emit = defineEmits(["update:modelValue"]);
+const model = defineModel();
 
 const isEditing = ref(false);
 const inputRef = ref(null);
-const localValue = ref(props.modelValue);
+const localValue = ref(model.value || "");
 
 const inputComponent = computed(() =>
   props.type === "textarea" ? "textarea" : "input"
 );
+
+const handleInput = (e) => {
+  localValue.value = e.target.value;
+};
 
 const enableEdit = async () => {
   isEditing.value = true;
@@ -53,8 +54,9 @@ const enableEdit = async () => {
 
 const saveChanges = () => {
   isEditing.value = false;
-  if (localValue.value !== props.modelValue) {
-    emit("update:modelValue", localValue.value);
+
+  if (localValue.value !== model.value) {
+    model.value = localValue.value;
   }
 };
 </script>
