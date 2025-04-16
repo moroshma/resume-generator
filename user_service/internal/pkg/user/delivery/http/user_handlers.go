@@ -2,7 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/moroshma/resume-generator/user_service/internal/app/helper"
 	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/user/repository/tarantool"
 	"net/http"
 	"strings"
 
@@ -18,9 +21,9 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 	handlers := &userHandlers{userUsecase}
 
 	r.With(middleware.AuthMiddleware()).Route("/api/v001/users", func(r chi.Router) {
-		r.Get("/info", handlers.getInfo)
-		r.Put("/info", handlers.updateUserInfo)
-		r.Post("/info", handlers.createUserInfo)
+		r.Get("/info", helper.Make(handlers.getInfo))
+		r.Put("/info", helper.Make(handlers.updateUserInfo))
+		r.Post("/info", helper.Make(handlers.createUserInfo))
 	})
 }
 
@@ -35,33 +38,31 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
 // @Failure 400 {string} string "Bad Request"
 // @Failure 401 {string} string "Unauthorized"
 // @Router /api/v001/users/info [get]
-func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
+func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) error {
 	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {
-		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
-		return
+		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
 	}
 	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
 	id, err := middleware.GetUserIDByAccessToken(tokenString)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
+		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
 	}
 
 	user, err := handlers.userUseCase.GetUserInfo(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNoContent)
-		return
+		return helper.UserNotFound()
 	}
 
 	res, err := json.Marshal(user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(res)
+
+	return nil
 }
 
 // updateUserInfo updates an existing user by its ID.
@@ -77,37 +78,36 @@ func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /api/v001/users/info [put]
-func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Request) {
+func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Request) error {
 	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {
-		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
-		return
+		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
 	}
 
 	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
 	id, err := middleware.GetUserIDByAccessToken(tokenString)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
+		return err
 	}
 
 	var user models.UserInfo
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return helper.InvalidJson()
 	}
 
 	userInfo, err := handlers.userUseCase.UpdateUserInfo(id, user)
+	if errors.Is(err, tarantool.UserInfoNotFound) {
+		return helper.NewAPIError(http.StatusNotFound, tarantool.UserInfoNotFound.Error())
+	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(userInfo)
-
+	return nil
 }
 
 // createUserInfo creates a new user info entry.
@@ -122,32 +122,30 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /api/v001/users/info [post]
-func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Request) {
+func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Request) error {
 	tokenCookie, err := r.Cookie("Authorization")
 	if err != nil {
-		http.Error(w, "Authorization cookie not found", http.StatusUnauthorized)
-		return
+		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
 	}
 	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
 	id, err := middleware.GetUserIDByAccessToken(tokenString)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
+		return err
 	}
 
 	var user models.UserInfo
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return helper.InvalidJson()
 	}
 	user.UserID = id
 
 	err = handlers.userUseCase.CreateUserInfo(user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return helper.NewAPIError(http.StatusUnprocessableEntity, err.Error())
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	return nil
 }

@@ -54,7 +54,6 @@ local function create_spaces()
         unique = true
     })
 
-    -- Спейс для образования
     local education = box.schema.space.create('education', {
         if_not_exists = true,
     })
@@ -78,7 +77,6 @@ local function create_spaces()
         if_not_exists = true
     })
 
-    -- Спейс для опыта работы
     local experience = box.schema.space.create('experience', {
         if_not_exists = true,
     })
@@ -176,16 +174,24 @@ end
 -- Функция для создания или обновления информации о пользователе
 function create_user_info(info)
     if type(info) ~= 'string' then
-        return utils.raw_response({ error = "Info must be a JSON string" })
+        return utils.raw_response({
+            status = 400,
+            error = "Info must be a JSON string"
+        })
     end
 
     local data = json.decode(info)
     if not data then
-        return utils.raw_response({ error = "Invalid JSON format" })
+        return utils.raw_response({
+            status = 400,
+            error = "Invalid JSON format" })
     end
 
     if not data.name or not data.surname then
-        return utils.raw_response({ error = "Name and surname are required" })
+        return utils.raw_response({
+            status = 400,
+            error = "Name and surname are required"
+        })
     end
 
     -- Генерируем новый ID пользователя если он не предоставлен
@@ -196,12 +202,12 @@ function create_user_info(info)
         user_id,
         data.name,
         data.surname,
-        data.email or '',
-        data.github or '',
-        data.phone_number or '',
-        data.location or '',
-        (data.social_profiles and data.social_profiles.linkedin) or '',
-        (data.social_profiles and data.social_profiles.telegram) or ''
+        data.email or box.NULL,
+        data.github or box.NULL,
+        data.phone_number or box.NULL,
+        data.location or box.NULL,
+        (data.social_profiles and data.social_profiles.linkedin) or box.NULL,
+        (data.social_profiles and data.social_profiles.telegram) or box.NULL
     })
 
     -- Добавляем образование
@@ -225,7 +231,9 @@ function create_user_info(info)
     if data.experience then
         for _, exp in ipairs(data.experience) do
             if not exp.company or not exp.role or not exp.from then
-                return utils.raw_response({ error = "Company, role and from date are required for experience" })
+                return utils.raw_response({
+                    status = 400,
+                    error = "Company, role and from date are required for experience" })
             end
             box.space.experience:insert({
                 get_next_id('experience'),
@@ -268,7 +276,7 @@ function get_user_info(user_id)
 
     local info = box.space.user_info:get(user_id)
     if not info then
-        return utils.raw_response({ error = "User info not found" })
+        return utils.raw_response({ error = "user info not found" })
     end
 
     local result = {
@@ -348,22 +356,30 @@ end
 -- New function to update user info based on provided JSON
 function update_user_info(info)
     if type(info) ~= 'string' then
-        return utils.raw_response({ error = "Info must be a JSON string" })
+        return utils.raw_response({
+            status = 400,
+            error = "Info must be a JSON string" })
     end
 
     local data = json.decode(info)
     if not data then
-        return utils.raw_response({ error = "Invalid JSON format" })
+        return utils.raw_response({
+            status = 400,
+            error = "Invalid JSON format" })
     end
 
     if not data.user_id then
-        return utils.raw_response({ error = "User_id is required" })
+        return utils.raw_response({
+            status = 400,
+            error = "User_id is required" })
     end
 
     local user_info_space = box.space.user_info
     local user = user_info_space:get(data.user_id)
     if not user then
-        return utils.raw_response({ error = "User not found" })
+        return utils.raw_response({
+            status = 404,
+            error = "User not found" })
     end
 
     -- Update main user info

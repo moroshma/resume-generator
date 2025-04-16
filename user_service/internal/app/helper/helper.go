@@ -36,6 +36,40 @@ func InvalidJson() APIError {
 	}
 }
 
+func InvalidToken() APIError {
+	return APIError{
+		Code:    http.StatusUnauthorized,
+		Message: "Invalid token",
+	}
+}
+
+func ValidateLoginOrPassword() APIError {
+	return APIError{
+		Code:    http.StatusBadRequest,
+		Message: "Login and password must be at least 6 characters long",
+	}
+}
+
+func InvalidCredentials() APIError {
+	return APIError{
+		Code:    http.StatusUnauthorized,
+		Message: "Invalid credentials",
+	}
+}
+func UserAlreadyExists() APIError {
+	return APIError{
+		Code:    http.StatusConflict,
+		Message: "User with this login already exists",
+	}
+}
+
+func UserNotFound() APIError {
+	return APIError{
+		Code:    http.StatusNotFound,
+		Message: "User not found",
+	}
+}
+
 type APIFunc func(w http.ResponseWriter, r *http.Request) error
 
 func Make(h APIFunc) http.HandlerFunc {
