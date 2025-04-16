@@ -51,7 +51,7 @@ func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) er
 
 	user, err := handlers.userUseCase.GetUserInfo(id)
 	if err != nil {
-		return helper.UserNotFound()
+		return helper.UserInfoNotFound()
 	}
 
 	res, err := json.Marshal(user)

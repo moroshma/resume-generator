@@ -63,9 +63,9 @@ func UserAlreadyExists() APIError {
 	}
 }
 
-func UserNotFound() APIError {
+func UserInfoNotFound() APIError {
 	return APIError{
-		Code:    http.StatusNotFound,
+		Code:    http.StatusNoContent,
 		Message: "User not found",
 	}
 }

@@ -378,8 +378,8 @@ function update_user_info(info)
     local user = user_info_space:get(data.user_id)
     if not user then
         return utils.raw_response({
-            status = 404,
-            error = "User not found" })
+            status = 204,
+            resp = "User not found" })
     end
 
     -- Update main user info
