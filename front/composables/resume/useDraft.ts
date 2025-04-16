@@ -12,7 +12,7 @@ export const useDraft = () => {
   ];
 
   const {
-    initQuestions,
+    initBasicQuestions,
     generateLabels,
     questions,
     getNextQuestions,
@@ -25,7 +25,7 @@ export const useDraft = () => {
   const step = computed(() => steps[stepNumber.value - 1]);
 
   onMounted(() => {
-    initQuestions();
+    initBasicQuestions();
   });
 
   const answeredCount = computed(() => {
@@ -60,7 +60,7 @@ export const useDraft = () => {
   }
 
   return {
-    initQuestions,
+    initBasicQuestions,
     generateLabels,
     questions,
     getNextQuestions,

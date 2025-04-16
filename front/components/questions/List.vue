@@ -8,12 +8,12 @@ defineProps({
   <div class="questions-container">
     <div
       v-for="question in draft.questions"
-      :key="question.id"
+      :key="question"
       class="question-card"
     >
-      <h3 class="question-title">{{ question.text }}</h3>
+      <h3 class="question-title">{{ question }}</h3>
       <QuestionsAnswerField
-        v-model="draft.answers[question.id]"
+        v-model="draft.answers[question]"
         :placeholder="question.placeholder"
       />
     </div>

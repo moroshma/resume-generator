@@ -20,13 +20,12 @@ export const useQA = () => {
 
   const isLoading = ref(false);
 
-  const initQuestions = async () => {
-    // const data = await $fetch("/api/v001/resume/basic/question");
-    questions.value = MOCK_QUESTIONS;
+  const initBasicQuestions = async () => {
+    const data: any = await $fetch("/api/qa/basic");
+    questions.value = data.questions;
   };
 
   const getNextQuestions = async () => {
-    console.log(answers);
     // const { data } = await useFetch<any>("/api/v001/resume/question/get", {
     //   method: "POST",
     //   body: { answers },
@@ -56,7 +55,7 @@ export const useQA = () => {
     answers,
     labels,
     pdfUrl,
-    initQuestions,
+    initBasicQuestions,
     getNextQuestions,
     generateLabels,
     isLoading,

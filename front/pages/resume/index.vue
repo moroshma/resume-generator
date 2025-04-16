@@ -27,7 +27,7 @@
 import { useDraft } from "~/composables/resume/useDraft";
 
 const {
-  initQuestions,
+  initBasicQuestions,
   generateLabels,
   questions,
   getNextQuestions,
@@ -40,10 +40,6 @@ const {
   nextStep,
   stepNumber,
 } = useDraft();
-
-onMounted(async () => {
-  await initQuestions();
-});
 
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {
