@@ -48,13 +48,17 @@ export const useProfile = () => {
     languages: [],
   });
 
-  const data: Ref<ProfileData> = ref(defaultData());
+  const data = useState<ProfileData>("profile", () => defaultData());
   const isSaving = ref(false);
   const lastSaved = ref<Date | null>(null);
   const saveError = ref<string | null>(null);
   const profileCreated = ref(false);
 
-  const { error, status } = useFetch("/api/user", {
+  const {
+    error,
+    status,
+    data: responseData,
+  } = useFetch("/api/user", {
     default: defaultData,
     transform: (input: any) => ({
       ...defaultData(),
@@ -62,10 +66,13 @@ export const useProfile = () => {
     }),
     onResponse: ({ response }) => {
       profileCreated.value = !!(response._data as ProfileData);
-      if (response.ok && (response._data as ProfileData))
-        data.value = response._data;
+      console.log(response._data, "response");
+      if (response.ok && (response._data as ProfileData)) {
+        data.value = { ...data.value, ...response._data };
+
+        console.log(data.value, "data");
+      }
     },
-    lazy: true,
   });
 
   const pending = computed(() => status.value === "pending");
@@ -99,6 +106,7 @@ export const useProfile = () => {
           body: data.value,
         });
       }
+      console.log(newProfile, "profile");
 
       if (!!(newProfile as ProfileData)) data.value = newProfile;
 
