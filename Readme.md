@@ -1,3 +1,7 @@
+# API docs
+
+    https://moroshma.github.io/resume-generator/
+
 Create swarm init
 
 docker info | grep -q "Swarm: active" || docker swarm init --advertise-addr 0.0.0.0
@@ -22,3 +26,6 @@ docker stack deploy -c docker-stack.yml resumeapp
 
 down stack
 docker stack rm resumeapp
+
+
+
