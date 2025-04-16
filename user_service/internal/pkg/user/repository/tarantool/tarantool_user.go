@@ -18,6 +18,7 @@ func NewTarantoolUserRepository(db *tarantool.Connection) models.UserRepositoryI
 }
 
 var CollisionCrateUser = errors.New("user with this login already exists")
+var UserInfoNotFound = errors.New("user info not found")
 
 func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
 	request := tarantool.NewCallRequest("create_new_user").Args([]interface{}{user.Login, user.Password})
@@ -48,20 +49,27 @@ func (p tarantoolUserRepository) CreateUser(user models.User) (uint, error) {
 }
 
 func (p tarantoolUserRepository) CreateUserInfo(info models.UserInfo) error {
-	// Сериализуем информацию о пользователе в JSON
 	jsonData, err := json.Marshal(info)
 	if err != nil {
 		return fmt.Errorf("error marshaling user info: %w", err)
 	}
 
-	// Создаем запрос к Tarantool
 	request := tarantool.NewCallRequest("create_user_info").Args([]interface{}{string(jsonData)})
-	_, err = p.conn.Do(request).Get()
+	resp, err := p.conn.Do(request).Get()
 	if err != nil {
-		return fmt.Errorf("error calling create_user_info: %w", err)
+		return fmt.Errorf("error calling get_user_info: %w", err)
 	}
 
-	return nil
+	if len(resp) == 0 {
+		return errors.New("empty response from get_user_info")
+	}
+
+	data := resp[0].(map[interface{}]interface{})
+	if len(data) == 0 {
+		return fmt.Errorf("invalid response format")
+	}
+
+	return checkErrorResponse(data)
 }
 
 func (p tarantoolUserRepository) UpdateUserInfo(info models.UserInfo) (models.UserInfo, error) {

@@ -4,14 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 )
 
 type ErrorResponse struct {
-	Er string `json:"error,omitempty"`
+	Er     string `json:"error,omitempty"`
+	Status int    `json:"status,omitempty"`
 }
 
 func (e *ErrorResponse) Error() string {
-	return e.Er
+	return e.Er + "; status:" + strconv.Itoa(e.Status)
 }
 
 func (e *ErrorResponse) HasError() bool {
@@ -80,4 +82,46 @@ func processTarantoolResponse[T any](data map[interface{}]interface{}) (T, error
 	}
 
 	return result, nil
+}
+
+func checkErrorResponse(data map[interface{}]interface{}) error {
+	var status uint8
+	for k, v := range data {
+		key, ok := k.(string)
+		if !ok {
+			return fmt.Errorf("invalid response format")
+		}
+
+		switch key {
+		case "status":
+			status, ok = v.(uint8)
+			if !ok {
+				return fmt.Errorf("invalid status value")
+			}
+		case "body":
+			if v == nil {
+				continue
+			}
+
+			bodyStr, ok := v.(string)
+			if !ok {
+				return fmt.Errorf("body is not a string")
+			}
+
+			if bodyStr == "" {
+				continue
+			}
+
+			checkErr := CheckErrorResponse(bodyStr)
+			if checkErr.HasError() {
+				return checkErr
+			}
+		}
+	}
+
+	if status != 200 {
+		return errors.New(fmt.Sprintf("error in response, status:%v", status))
+	}
+
+	return nil
 }
