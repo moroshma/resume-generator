@@ -9,6 +9,7 @@
       :is="inputComponent"
       ref="inputRef"
       v-model="localValue"
+      :value="localValue"
       :type="type"
       :placeholder="placeholder"
       @blur="saveChanges"

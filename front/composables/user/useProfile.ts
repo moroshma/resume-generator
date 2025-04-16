@@ -1,5 +1,3 @@
-import type { Ref } from "vue";
-
 interface ProfileData {
   name: string;
   surname: string;
@@ -49,33 +47,25 @@ export const useProfile = () => {
   });
 
   const data = useState<ProfileData>("profile", () => defaultData());
-  const isSaving = ref(false);
+  const isSaving = useState<boolean>("is-saving", () => false);
   const lastSaved = ref<Date | null>(null);
   const saveError = ref<string | null>(null);
-  const profileCreated = ref(false);
+  const profileCreated = useState<boolean>("profile-created", () => false);
+  let initialSnapshot: string;
 
-  const {
-    error,
-    status,
-    data: responseData,
-  } = useFetch("/api/user", {
+  const { error } = useFetch("/api/user", {
     default: defaultData,
-    transform: (input: any) => ({
-      ...defaultData(),
-      ...input,
-    }),
     onResponse: ({ response }) => {
-      profileCreated.value = !!(response._data as ProfileData);
-      console.log(response._data, "response");
+      isSaving.value = true;
+      profileCreated.value = response.status === 200;
+
       if (response.ok && (response._data as ProfileData)) {
         data.value = { ...data.value, ...response._data };
-
-        console.log(data.value, "data");
+        initialSnapshot = JSON.stringify(Object.assign({}, data.value));
       }
+      isSaving.value = false;
     },
   });
-
-  const pending = computed(() => status.value === "pending");
 
   const debounce = <T extends (...args: any[]) => void>(
     fn: T,
@@ -106,9 +96,11 @@ export const useProfile = () => {
           body: data.value,
         });
       }
-      console.log(newProfile, "profile");
 
-      if (!!(newProfile as ProfileData)) data.value = newProfile;
+      if (!!(newProfile as ProfileData)) {
+        data.value = { ...data.value, ...newProfile };
+        initialSnapshot = JSON.stringify(Object.assign({}, data.value));
+      }
 
       lastSaved.value = new Date();
     } catch (error) {
@@ -120,13 +112,19 @@ export const useProfile = () => {
 
   const debouncedSave = debounce(saveProfile, 500);
 
-  watch(
-    () => data.value,
-    (newVal) => {
-      if (!pending.value) debouncedSave();
-    },
-    { deep: true }
-  );
+  onMounted(() => {
+    watch(
+      () => data.value,
+      (newVal) => {
+        if (
+          !isSaving.value &&
+          JSON.stringify(Object.assign({}, data.value)) !== initialSnapshot
+        )
+          debouncedSave();
+      },
+      { deep: true }
+    );
+  });
 
   const addEducation = () => {
     data.value.education.push({
@@ -164,8 +162,6 @@ export const useProfile = () => {
 
   return {
     data,
-    pending,
-
     isSaving,
     lastSaved,
     saveError,
