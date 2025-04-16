@@ -1,17 +1,5 @@
 name: Deploy Application to Swarm
-
-on:
-  workflow_dispatch:
-    inputs:
-      deploy_environment:
-        description: 'deployment environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - staging
-
+on: workflow_dispatch
 jobs:
   deploy:
     name: Deploy to Docker Swarm
