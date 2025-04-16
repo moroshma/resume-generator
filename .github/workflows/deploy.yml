@@ -1,7 +1,21 @@
 name: Deploy Application to Swarm
-on: workflow_dispatch
+
+on:
+  workflow_run:
+    workflows:
+      - "Build and Push AI Service"
+      - "Build and Push Frontend"
+      - "Build and Push resume-storage"
+      - "Build and Push User Service"
+    types:
+      - completed
+    branches:
+      - main
+      - master
+
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Deploy to Docker Swarm
     runs-on: ubuntu-latest
 
@@ -102,4 +116,3 @@ jobs:
             # Но обычно docker stack deploy сам обновит сервисы, чья конфигурация изменилась (volumes)
 
             echo "Stack deployment initiated."
-            echo "Deployed environment: ${{ github.event.inputs.deploy_environment }}"
