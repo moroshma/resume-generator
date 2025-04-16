@@ -66,7 +66,7 @@ func Run() {
 		if err == nil {
 			break
 		}
-		log.Printf("Failed to connect: %s. Retrying in 1 second...", err)
+		log.Printf("Failed to connect: %s. Retrying in 1 second...:Host%v", err, dbHost)
 		time.Sleep(1 * time.Second)
 	}
 
