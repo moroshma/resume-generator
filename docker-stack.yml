@@ -127,15 +127,13 @@ services:
     environment:
       - DB_HOST=tarantool:3301
       - APP_ENV=prod
-      # URL для внутреннего общения можно оставить HTTP
-      # - SOME_INTERNAL_URL=http://ai-service:8080/path
     networks:
       - proxy
       - internal
     depends_on:
       - tarantool
     deploy:
-      replicas: 3
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -168,7 +166,7 @@ services:
     depends_on:
       - user-service
     deploy:
-      replicas: 3
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -263,7 +261,7 @@ services:
       - postgres-resume-service
       - minio-resume-service
     deploy:
-      replicas: 3
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
