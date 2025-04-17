@@ -14,13 +14,18 @@ import (
 )
 
 type userHandlers struct {
-	userUseCase models.UserUseCaseI
+	userUseCase  models.UserUseCaseI
+	tokenUseCase models.TokenUsecaseI
 }
 
-func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI) {
-	handlers := &userHandlers{userUsecase}
+func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI,
+	tokenUsecase models.TokenUsecaseI) {
+	handlers := &userHandlers{
+		userUseCase:  userUsecase,
+		tokenUseCase: tokenUsecase,
+	}
 
-	r.With(middleware.AuthMiddleware()).Route("/api/v001/users", func(r chi.Router) {
+	r.With(middleware.AuthMiddleware(tokenUsecase)).Route("/api/v001/users", func(r chi.Router) {
 		r.Get("/info", helper.Make(handlers.getInfo))
 		r.Put("/info", helper.Make(handlers.updateUserInfo))
 		r.Post("/info", helper.Make(handlers.createUserInfo))
