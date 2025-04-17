@@ -36,17 +36,17 @@ local function create_spaces()
     local user_info = box.schema.space.create('user_info', {
         if_not_exists = true,
     })
-    user_info:format({
-        { name = 'user_id', type = 'unsigned' },
-        { name = 'name', type = 'string', is_nullable = true },
-        { name = 'surname', type = 'string', is_nullable = true },
-        { name = 'email', type = 'string', is_nullable = true },
-        { name = 'github', type = 'string', is_nullable = true },
-        { name = 'phone_number', type = 'string', is_nullable = true },
-        { name = 'location', type = 'string', is_nullable = true },
-        { name = 'linkedin', type = 'string', is_nullable = true },
-        { name = 'telegram', type = 'string', is_nullable = true }
-    })
+ user_info:format({
+    { name = 'user_id', type = 'unsigned' },
+    { name = 'name', type = 'string' },
+    { name = 'surname', type = 'string' },
+    { name = 'email', type = 'string' },
+    { name = 'github', type = 'string' },
+    { name = 'phone_number', type = 'string' },
+    { name = 'location', type = 'string' },
+    { name = 'linkedin', type = 'string' },
+    { name = 'telegram', type = 'string' }
+})
     user_info:create_index('primary', {
         type = 'hash',
         parts = { 'user_id' },
@@ -192,8 +192,8 @@ function create_user_info(info)
     -- Создаем основную информацию
     box.space.user_info:insert({
         user_id,
-        data.name or box.NULL,
-        data.surname or box.NULL,
+        data.name or '',
+        data.surname or '',
         data.email or box.NULL,
         data.github or box.NULL,
         data.phone_number or box.NULL,
@@ -273,8 +273,8 @@ function get_user_info(user_id)
 
     local result = {
         user_id = info[1],
-        name = info[2],
-        surname = info[3],
+        name = info[2] or '',
+        surname = info[3] or '',
         email = info[4],
         github = info[5],
         phone_number = info[6],
