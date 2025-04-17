@@ -112,19 +112,17 @@ export const useProfile = () => {
 
   const debouncedSave = debounce(saveProfile, 500);
 
-  onMounted(() => {
-    watch(
-      () => data.value,
-      (newVal) => {
-        if (
-          !isSaving.value &&
-          JSON.stringify(Object.assign({}, data.value)) !== initialSnapshot
-        )
-          debouncedSave();
-      },
-      { deep: true }
-    );
-  });
+  watch(
+    () => data.value,
+    (newVal) => {
+      if (
+        !isSaving.value &&
+        JSON.stringify(Object.assign({}, data.value)) !== initialSnapshot
+      )
+        debouncedSave();
+    },
+    { deep: true }
+  );
 
   const addEducation = () => {
     data.value.education.push({

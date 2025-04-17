@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   } catch (error) {
     setResponseStatus(event, 500);
     return {
-      error: "Internal Server Error",
+      error: "Internal Server Error: " + error,
       details: error instanceof Error ? error.message : String(error),
     };
   }

@@ -35,7 +35,7 @@ const model = defineModel();
 
 const isEditing = ref(false);
 const inputRef = ref(null);
-const localValue = ref(model.value || "");
+const localValue = ref(model.value);
 
 const inputComponent = computed(() =>
   props.type === "textarea" ? "textarea" : "input"
