@@ -46,6 +46,7 @@ const handleInput = (e) => {
 };
 
 const enableEdit = async () => {
+  localValue.value = model.value;
   isEditing.value = true;
   await nextTick();
   if (inputRef.value?.select) {

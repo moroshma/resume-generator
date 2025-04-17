@@ -60,7 +60,8 @@ export const useProfile = () => {
       profileCreated.value = response.status === 200;
 
       if (response.ok && (response._data as ProfileData)) {
-        data.value = { ...data.value, ...response._data };
+        data.value = Object.assign(defaultData(), response._data);
+
         initialSnapshot = JSON.stringify(Object.assign({}, data.value));
       }
       isSaving.value = false;
