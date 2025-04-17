@@ -86,7 +86,7 @@ services:
         # Замените portainer.cvibe.ru на желаемый поддомен или используйте основной с PathPrefix
         - "traefik.http.routers.portainer-http.entrypoints=web"
         - "traefik.http.routers.portainer-http.rule=Host(`portainer.cvibe.ru`)"
-        # --- HTTPS Роутер ---
+        # --- HTTPS Роутер
         - "traefik.http.routers.portainer-secure.entrypoints=websecure"
         - "traefik.http.routers.portainer-secure.rule=Host(`portainer.cvibe.ru`)"
         - "traefik.http.routers.portainer-secure.tls=true" # Включить TLS
@@ -127,8 +127,6 @@ services:
     environment:
       - DB_HOST=tarantool:3301
       - APP_ENV=prod
-      # URL для внутреннего общения можно оставить HTTP
-      # - SOME_INTERNAL_URL=http://ai-service:8080/path
     networks:
       - proxy
       - internal
