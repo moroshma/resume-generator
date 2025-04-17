@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/moroshma/resume-generator/user_service/internal/app/helper"
 	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/utils"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/user/repository/tarantool"
 	"net/http"
 	"strings"
@@ -44,7 +45,7 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI,
 // @Failure 401 {string} string "Unauthorized"
 // @Router /api/v001/users/info [get]
 func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) error {
-	tokenCookie, err := r.Cookie("Authorization")
+	tokenCookie, err := r.Cookie(utils.AuthTokenName)
 	if err != nil {
 		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
 	}
@@ -84,7 +85,7 @@ func (handlers *userHandlers) getInfo(w http.ResponseWriter, r *http.Request) er
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /api/v001/users/info [put]
 func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Request) error {
-	tokenCookie, err := r.Cookie("Authorization")
+	tokenCookie, err := r.Cookie(utils.AuthTokenName)
 	if err != nil {
 		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
 	}
@@ -128,7 +129,7 @@ func (handlers *userHandlers) updateUserInfo(w http.ResponseWriter, r *http.Requ
 // @Failure 500 {string} string "Internal Server Error"
 // @Router /api/v001/users/info [post]
 func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Request) error {
-	tokenCookie, err := r.Cookie("Authorization")
+	tokenCookie, err := r.Cookie(utils.AuthTokenName)
 	if err != nil {
 		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
 	}
