@@ -30,7 +30,7 @@ func NewAuthHandlers(r *chi.Mux,
 		r.Post("/register", helper.Make(handlers.register))
 		r.Post("/login", helper.Make(handlers.logIn))
 		r.With(middleware.AuthMiddleware(tokenUseCase)).Delete("/logout", helper.Make(handlers.logOut))
-		r.With(middleware.AuthMiddleware(tokenUseCase)).Get("/check", helper.Make(handlers.authCheck))
+		r.With(middleware.AuthMiddleware(tokenUseCase)).Get("/check", handlers.authCheck)
 	})
 }
 
@@ -139,9 +139,8 @@ func (handlers *authHandlers) generateAccessTokenByRefreshToken(w http.ResponseW
 	return nil
 }
 
-func (handlers *authHandlers) authCheck(w http.ResponseWriter, _ *http.Request) error {
+func (handlers *authHandlers) authCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
 
-	return nil
 }

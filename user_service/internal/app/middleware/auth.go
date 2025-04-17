@@ -62,6 +62,8 @@ func AuthMiddleware(tokenUseCase models.TokenUsecaseI) func(http.Handler) http.H
 					return
 				}
 
+				utils.SetAccessTokenRequestCookie(r, newRefreshToken)
+
 				utils.SetRefreshTokenCookie(w, newRefreshToken)
 			}
 
