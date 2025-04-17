@@ -91,6 +91,7 @@ export const useProfile = () => {
           body: data.value,
         });
         newProfile = await $fetch("/api/user");
+        profileCreated.value = true;
       } else {
         newProfile = await $fetch("/api/user", {
           method: "PUT",
