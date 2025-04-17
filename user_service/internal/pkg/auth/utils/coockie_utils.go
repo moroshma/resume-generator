@@ -10,7 +10,7 @@ const (
 	AuthTokenName    = "Authorization"
 	cookiePath       = "/"
 	refreshMaxAge    = 7 * 24 * 60 * 60
-	accessMaxAge     = 15
+	accessMaxAge     = 15 * 60
 )
 
 func SetRefreshTokenCookie(w http.ResponseWriter, token string) {
