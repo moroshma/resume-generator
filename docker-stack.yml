@@ -125,7 +125,7 @@ services:
     depends_on: # Указывает на зависимость, хотя Swarm не гарантирует порядок запуска, это полезно для compose
       - tarantool
     deploy:
-      replicas: 3 # Или 1, если пока не нужна высокая доступность
+      replicas: 1 # Или 1, если пока не нужна высокая доступность
       update_config:
         parallelism: 1
         delay: 10s
@@ -151,7 +151,7 @@ services:
     depends_on:
       - user-service
     deploy:
-      replicas: 3 # Или 1
+      replicas: 1 # Или 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -249,7 +249,7 @@ services:
       - postgres-resume-service
       - minio-resume-service
     deploy:
-      replicas: 3 # Или 1
+      replicas: 1 # Или 1
       update_config:
         parallelism: 1
         delay: 10s
