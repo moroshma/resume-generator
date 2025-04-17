@@ -80,7 +80,7 @@ func Make(h APIFunc) http.HandlerFunc {
 			} else {
 				errResp := map[string]any{
 					"status":  http.StatusInternalServerError,
-					"message": "Internal Server Error",
+					"message": fmt.Sprintf("Internal Server Error, err%v:", err),
 				}
 				writeJSON(w, apiErr.Code, errResp)
 			}

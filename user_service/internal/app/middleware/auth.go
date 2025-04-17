@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/utils"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 	"net/http"
@@ -23,7 +24,7 @@ func AuthMiddleware(tokenUseCase models.TokenUsecaseI) func(http.Handler) http.H
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			refreshToken, err := r.Cookie("Refresh-Token")
 			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				http.Error(w, fmt.Sprintf("Unauthorized Refresh-Token error:%v", err), http.StatusUnauthorized)
 				return
 			}
 			_, err = jwt.ParseWithClaims(refreshToken.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
