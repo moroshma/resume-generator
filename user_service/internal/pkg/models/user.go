@@ -10,10 +10,10 @@ type UserInfo struct {
 	UserID         uint           `json:"user_id,omitempty"`
 	Name           string         `json:"name,omitempty"`
 	Surname        string         `json:"surname,omitempty"`
-	Email          string         `json:"email,omitempty"`
-	Github         string         `json:"github,omitempty"`
-	PhoneNumber    string         `json:"phone_number,omitempty"`
-	Location       string         `json:"location,omitempty"`
+	Email          *string        `json:"email,omitempty"`
+	Github         *string        `json:"github,omitempty"`
+	PhoneNumber    *string        `json:"phone_number,omitempty"`
+	Location       *string        `json:"location,omitempty"`
 	Education      []Education    `json:"education,omitempty"`
 	Experience     []Experience   `json:"experience,omitempty"`
 	SocialProfiles SocialProfiles `json:"social_profiles,omitempty"`
@@ -43,8 +43,8 @@ type Experience struct {
 }
 
 type SocialProfiles struct {
-	Linkedin string `json:"linkedin,omitempty"`
-	Telegram string `json:"telegram,omitempty"`
+	Linkedin *string `json:"linkedin,omitempty"`
+	Telegram *string `json:"telegram,omitempty"`
 }
 
 type UserUseCaseI interface {
