@@ -42,6 +42,8 @@ const auth = async (userAuthData) => {
       errorMessage.value = "Неверно введен логин или пароль.";
     } else if (error.status === 409) {
       errorMessage.value = "Пользователь с таким именем уже существует.";
+    } else {
+      errorMessage.value = error.message;
     }
   }
 };
