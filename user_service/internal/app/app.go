@@ -73,7 +73,6 @@ func Run() {
 	if err != nil {
 		log.Fatalf("Failed to connect after 5 attempts: %s", err)
 	}
-
 	defer conn.Close()
 
 	tokenUseCase := token_usecase.NewTokenUseCase()
