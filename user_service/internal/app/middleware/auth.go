@@ -27,6 +27,7 @@ func AuthMiddleware(tokenUseCase models.TokenUsecaseI) func(http.Handler) http.H
 				http.Error(w, fmt.Sprintf("Unauthorized Refresh-Token error:%v", err), http.StatusUnauthorized)
 				return
 			}
+
 			_, err = jwt.ParseWithClaims(refreshToken.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 				return SECRET, nil
 			})
