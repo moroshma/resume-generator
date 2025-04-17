@@ -1,3 +1,11 @@
+x-logger: &logger
+  logging:
+    driver: json-file
+    options:
+      max-size: "10M"
+      max-file: "3"
+      tag: "{{.ImageName}}|{{.Name}}"
+
 services:
   # Traefik - Edge Router
   traefik:
@@ -29,11 +37,7 @@ services:
         condition: on-failure
       placement: # Рекомендуется размещать Traefik на manager ноде
         constraints: [node.role == manager]
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
+    <<: *logger
 
   # Portainer - Docker Management UI
   portainer:
@@ -54,6 +58,7 @@ services:
         condition: on-failure
       placement: # Рекомендуется размещать Portainer на manager ноде
         constraints: [node.role == manager]
+    <<: *logger
 
   # Front-end App
   front:
@@ -78,6 +83,7 @@ services:
         - "traefik.http.routers.front.rule=PathPrefix(`/`)"
         - "traefik.http.services.front.loadbalancer.server.port=80"
         - "traefik.http.routers.front.priority=1"
+    <<: *logger
 
   # Tarantool - база данных для user-service
   tarantool:
@@ -100,11 +106,7 @@ services:
     networks:
       - internal
       # - proxy # Tarantool обычно не нужно выставлять наружу через proxy
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "200k"
-        max-file: "10"
+    <<: *logger
     deploy:
       replicas: 1
       restart_policy:
@@ -139,6 +141,7 @@ services:
         - "traefik.http.middlewares.strip-user-service.stripprefix.prefixes=/user_service"
         - "traefik.http.routers.user-service.middlewares=strip-user-service"
         - "traefik.http.services.user-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
+    <<: *logger
 
   # AI Service
   ai-service:
@@ -165,6 +168,7 @@ services:
         - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
         - "traefik.http.routers.ai-service.middlewares=strip-ai-service"
         - "traefik.http.services.ai-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
+      <<: *logger
 
   # Minio Resume Service
   minio-resume-service:
@@ -193,6 +197,7 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+    <<: *logger
 
   postgres-resume-service:
     image: postgres:latest
@@ -221,6 +226,7 @@ services:
       # Можно ограничить размещение нодой, где лежат конфиги
       # placement:
       #   constraints: [node.role == manager]
+    <<: *logger
 
   # Resume Storage Service
   resume-storage:
@@ -263,7 +269,8 @@ services:
         - "traefik.http.middlewares.strip-resume-service.stripprefix.prefixes=/resume_storage"
         - "traefik.http.routers.resume-storage.middlewares=strip-resume-service"
         - "traefik.http.services.resume-storage.loadbalancer.server.port=8080" # Порт, который слушает FastAPI
-
+    <<: *logger
+    
 networks:
   proxy:
     driver: overlay
