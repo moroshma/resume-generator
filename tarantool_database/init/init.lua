@@ -38,8 +38,8 @@ local function create_spaces()
     })
     user_info:format({
         { name = 'user_id', type = 'unsigned' },
-        { name = 'name', type = 'string' },
-        { name = 'surname', type = 'string' },
+        { name = 'name', type = 'string', is_nullable = true },
+        { name = 'surname', type = 'string', is_nullable = true },
         { name = 'email', type = 'string', is_nullable = true },
         { name = 'github', type = 'string', is_nullable = true },
         { name = 'phone_number', type = 'string', is_nullable = true },
@@ -187,21 +187,13 @@ function create_user_info(info)
             error = "Invalid JSON format" })
     end
 
-    if not data.name or not data.surname then
-        return utils.raw_response({
-            status = 400,
-            error = "Name and surname are required"
-        })
-    end
-
     -- Генерируем новый ID пользователя если он не предоставлен
     local user_id = data.user_id or get_next_id('user_info')
-
     -- Создаем основную информацию
     box.space.user_info:insert({
         user_id,
-        data.name,
-        data.surname,
+        data.name or box.NULL,
+        data.surname or box.NULL,
         data.email or box.NULL,
         data.github or box.NULL,
         data.phone_number or box.NULL,
