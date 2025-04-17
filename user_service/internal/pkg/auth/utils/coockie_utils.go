@@ -10,7 +10,7 @@ const (
 	AuthTokenName    = "Authorization"
 	cookiePath       = "/"
 	refreshMaxAge    = 7 * 24 * 60 * 60
-	accessMaxAge     = 15 * 60
+	accessMaxAge     = 15
 )
 
 func SetRefreshTokenCookie(w http.ResponseWriter, token string) {
@@ -21,7 +21,6 @@ func SetRefreshTokenCookie(w http.ResponseWriter, token string) {
 		HttpOnly: true,
 		MaxAge:   refreshMaxAge,
 		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
 	})
 }
 
@@ -33,7 +32,6 @@ func SetAccessTokenCookie(w http.ResponseWriter, token string) {
 		HttpOnly: true,
 		MaxAge:   accessMaxAge,
 		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
 	})
 }
 
@@ -45,7 +43,6 @@ func ClearRefreshTokenCookie(w http.ResponseWriter) {
 		HttpOnly: true,
 		MaxAge:   -1,
 		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
 	})
 }
 
@@ -57,6 +54,16 @@ func ClearAccessTokenCookie(w http.ResponseWriter) {
 		HttpOnly: true,
 		MaxAge:   -1,
 		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func SetAccessTokenRequestCookie(r *http.Request, token string) {
+	r.AddCookie(&http.Cookie{
+		Name:     AuthTokenName,
+		Value:    fmt.Sprintf("Bearer %s", token),
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   accessMaxAge,
+		Secure:   false,
 	})
 }
