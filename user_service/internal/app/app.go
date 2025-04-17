@@ -80,7 +80,7 @@ func Run() {
 	userUseCase := user_usecase.NewUserUseCase(user_repository.NewTarantoolUserRepository(conn))
 
 	auth_handlers.NewAuthHandlers(r, userUseCase, tokenUseCase)
-	user_handlers.NewUserHandlers(r, userUseCase)
+	user_handlers.NewUserHandlers(r, userUseCase, tokenUseCase)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/user_service/swagger/doc.json"),

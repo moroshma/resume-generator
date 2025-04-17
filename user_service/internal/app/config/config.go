@@ -1,7 +1,9 @@
 package config
 
 import (
+	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
 	"log"
+	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -31,6 +33,12 @@ func LoadConfig(filepath string) (*UserService, error) {
 		log.Fatalf("Error reading environment variables: %v", err)
 		return nil, err
 	}
-
+	setSECRET()
 	return &cfg, nil
+}
+
+func setSECRET() {
+	if os.Getenv("SECRET") != "" {
+		middleware.SECRET = []byte(os.Getenv("SECRET"))
+	}
 }
