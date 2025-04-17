@@ -32,6 +32,7 @@ const auth = async (userAuthData) => {
     } else if (type === "register") {
       response = await register(loginData, password);
     }
+
     let status = response.status;
     if (status === 200 || status === 201) {
       navigateTo("/home");
@@ -42,8 +43,10 @@ const auth = async (userAuthData) => {
       errorMessage.value = "Неверно введен логин или пароль.";
     } else if (error.status === 409) {
       errorMessage.value = "Пользователь с таким именем уже существует.";
-    } else {
-      errorMessage.value = error.message;
+    } else if (error.status === 400) {
+      errorMessage.value = "Неправильное имя или пароль.";
+    } else if (error.status >= 500) {
+      errorMessage.value = "Ошибка сервера.";
     }
   }
 };
