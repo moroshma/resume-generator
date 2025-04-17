@@ -168,7 +168,7 @@ services:
         - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
         - "traefik.http.routers.ai-service.middlewares=strip-ai-service"
         - "traefik.http.services.ai-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
-      <<: *logger
+    <<: *logger
 
   # Minio Resume Service
   minio-resume-service:
@@ -270,7 +270,7 @@ services:
         - "traefik.http.routers.resume-storage.middlewares=strip-resume-service"
         - "traefik.http.services.resume-storage.loadbalancer.server.port=8080" # Порт, который слушает FastAPI
     <<: *logger
-    
+
 networks:
   proxy:
     driver: overlay
