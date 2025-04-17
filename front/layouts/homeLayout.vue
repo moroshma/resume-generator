@@ -33,6 +33,9 @@ const startNewResume = () => {
 
 async function out() {
   await logout();
-  navigateTo("/");
+  await navigateTo("/", {
+    redirectCode: 302,
+    external: true,
+  });
 }
 </script>
