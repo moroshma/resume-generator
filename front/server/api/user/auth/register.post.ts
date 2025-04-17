@@ -16,12 +16,13 @@ export default defineEventHandler(async (event) => {
         }),
       }
     );
+    console.log({ ...response }, "response from register");
 
     return response;
   } catch (error) {
     setResponseStatus(event, 500);
     return {
-      error: "Internal Server Error: " + error,
+      error: "Internal Server Error",
       details: error instanceof Error ? error.message : String(error),
     };
   }
