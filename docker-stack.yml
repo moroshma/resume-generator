@@ -139,13 +139,6 @@ services:
         - "traefik.http.middlewares.strip-user-service.stripprefix.prefixes=/user_service"
         - "traefik.http.routers.user-service.middlewares=strip-user-service"
         - "traefik.http.services.user-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-        labels: "user-service"
-        env: "prod"
 
   # AI Service
   ai-service:
@@ -172,13 +165,6 @@ services:
         - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
         - "traefik.http.routers.ai-service.middlewares=strip-ai-service"
         - "traefik.http.services.ai-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-        labels: "ai-service"
-        env: "prod"
 
   # Minio Resume Service
   minio-resume-service:
@@ -277,13 +263,6 @@ services:
         - "traefik.http.middlewares.strip-resume-service.stripprefix.prefixes=/resume_storage"
         - "traefik.http.routers.resume-storage.middlewares=strip-resume-service"
         - "traefik.http.services.resume-storage.loadbalancer.server.port=8080" # Порт, который слушает FastAPI
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
-        labels: "resume-storage"
-        env: "prod"
 
 networks:
   proxy:
