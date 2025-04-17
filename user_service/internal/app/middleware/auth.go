@@ -59,8 +59,8 @@ func AuthMiddleware(tokenUseCase models.TokenUsecaseI) func(http.Handler) http.H
 					http.Error(w, "Internal Server Error: Could not refresh session fully", http.StatusInternalServerError)
 					return
 				}
-				utils.SetRefreshTokenCookie(w, newRefreshToken)
 
+				utils.SetRefreshTokenCookie(w, newRefreshToken)
 			}
 
 			next.ServeHTTP(w, r)
