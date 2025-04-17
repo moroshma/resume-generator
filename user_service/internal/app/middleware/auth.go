@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/utils"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
+	"log/slog"
 	"net/http"
 
 	"strconv"
@@ -71,7 +72,7 @@ func AuthMiddleware(tokenUseCase models.TokenUsecaseI) func(http.Handler) http.H
 
 func GetUserIDByAccessToken(accessToken string) (uint, error) {
 	accessToken = strings.TrimPrefix(accessToken, "Bearer ")
-
+	slog.Any("-----------AccessToken:  ", accessToken)
 	token, err := jwt.ParseWithClaims(accessToken, &claims{}, func(token *jwt.Token) (interface{}, error) {
 		return SECRET, nil
 	})
