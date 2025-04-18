@@ -110,7 +110,7 @@ services:
       - "traefik.http.services.internal-traefik-service.loadbalancer.server.port=80"
       # Сервис в traefik-front, указывающий на порт 8080 (dashboard) этого внутреннего traefik
       - "traefik.http.services.internal-traefik-dashboard-service.loadbalancer.server.port=8080"
-    <<: *logger
+  <<: *logger
 
   # Portainer - Docker Management UI
   portainer:
