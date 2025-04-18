@@ -15,7 +15,7 @@ services:
     command:
       # --- Static Configuration ---
       - "--api.dashboard=true"
-      - "--log.level=INFO" # INFO для прода, DEBUG для отладки
+      - "--log.level=INFO"
       # --- Entrypoints ---
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
@@ -91,29 +91,26 @@ services:
         condition: on-failure
       placement:
         constraints: [node.role == manager]
-      labels:
-        # --- Лейблы для traefik-front, чтобы он перенаправлял сюда трафик ---
-        - "traefik.enable=true" # Этот лейбл читает traefik-front
+    labels:
+      # --- Лейбл для traefik-front, чтобы он обнаружил этот сервис ---
+      # --- УДАЛИТЕ ЭТИ РОУТЕРЫ ОТСЮДА ---
+      # - "traefik.http.routers.to-internal-traefik.rule=Host(`cvibe.ru`) || Host(`www.cvibe.ru`)"
+      # - "traefik.http.routers.to-internal-traefik.entrypoints=websecure"
+      # - "traefik.http.routers.to-internal-traefik.tls=true"
+      # - "traefik.http.routers.to-internal-traefik.service=internal-traefik-service"
+      # - "traefik.http.routers.to-internal-traefik.priority=1"
+      # - "traefik.http.routers.traefik-internal-dashboard.rule=Host(`traefik-internal.cvibe.ru`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      # - "traefik.http.routers.traefik-internal-dashboard.service=internal-traefik-dashboard-service"
+      # - "traefik.http.routers.traefik-internal-dashboard.entrypoints=websecure"
+      # - "traefik.http.routers.traefik-internal-dashboard.tls=true"
 
-        # --- Роутер в traefik-front для перенаправления ВСЕГО трафика домена на этот внутренний traefik ---
-        - "traefik.http.routers.to-internal-traefik.rule=Host(`cvibe.ru`) || Host(`www.cvibe.ru`)" # Укажите ваши домены
-        - "traefik.http.routers.to-internal-traefik.entrypoints=websecure" # Ловим HTTPS трафик на traefik-front
-        - "traefik.http.routers.to-internal-traefik.tls=true" # Обрабатываем TLS на traefik-front
-        - "traefik.http.routers.to-internal-traefik.service=internal-traefik-service" # Связь с сервисом ниже
-        - "traefik.http.routers.to-internal-traefik.priority=1" # Низкий приоритет
-        # --- Сервис в traefik-front, указывающий на этот внутренний traefik ---
-        # Он говорит traefik-front куда слать трафик, пойманный роутером to-internal-traefik
-        - "traefik.http.services.internal-traefik-service.loadbalancer.server.port=80"
-        # --- Маршрутизация Dashboard внутреннего traefik через traefik-front (опционально) ---
-        - "traefik.http.routers.traefik-internal-dashboard.rule=Host(`traefik-internal.cvibe.ru`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))" # Другой домен/путь
-        - "traefik.http.routers.traefik-internal-dashboard.service=internal-traefik-dashboard-service"
-        - "traefik.http.routers.traefik-internal-dashboard.entrypoints=websecure"
-        - "traefik.http.routers.traefik-internal-dashboard.tls=true"
-        # --- !! РЕКОМЕНДУЕТСЯ ДОБАВИТЬ АУТЕНТИФИКАЦИЮ !! ---
-        # - "traefik.http.middlewares.internal-auth.basicauth.users=admin:$$apr1$$...$$..." # Замените на ваш хеш htpasswd
-        # - "traefik.http.routers.traefik-internal-dashboard.middlewares=internal-auth"
-        - "traefik.http.services.internal-traefik-dashboard-service.loadbalancer.server.port=8080" # Указываем на порт API/Dashboard внутреннего traefik
-    <<: *logger
+      # --- ОСТАВЬТЕ ЭТИ СЕРВИСЫ ЗДЕСЬ ---
+      # Сервис в traefik-front, указывающий на порт 80 этого внутреннего traefik
+      - "traefik.enable=true" # Этот лейбл читает traefik-front
+      - "traefik.http.services.internal-traefik-service.loadbalancer.server.port=80"
+      # Сервис в traefik-front, указывающий на порт 8080 (dashboard) этого внутреннего traefik
+      - "traefik.http.services.internal-traefik-dashboard-service.loadbalancer.server.port=8080"
+  <<: *logger
 
   # Portainer - Docker Management UI
   portainer:
@@ -142,8 +139,8 @@ services:
         - "traefik.http.routers.portainer.entrypoints=web"
         - "traefik.http.routers.portainer.service=portainer-service"
         # --- Portainer работает по HTTPS (порт 9443), поэтому внутренний traefik должен обращаться к нему по HTTPS ---
-#        - "traefik.http.services.portainer-service.loadbalancer.server.port=9443"
-#        - "traefik.http.services.portainer-service.loadbalancer.server.scheme=https"
+        - "traefik.http.services.portainer-service.loadbalancer.server.port=9443"
+        - "traefik.http.services.portainer-service.loadbalancer.server.scheme=https"
         # Замечание: traefik-front перенаправляет запрос на внутренний traefik по HTTP,
         # а внутренний traefik уже общается с Portainer по HTTPS.
     <<: *logger
