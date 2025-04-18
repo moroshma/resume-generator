@@ -135,8 +135,15 @@ export const useProfile = () => {
     });
   };
 
-  const removeEducation = (index: number) => {
-    data.value.education.splice(index, 1);
+  const removeEducation = async (index: number) => {
+    const response = await $fetch.raw("/api/user", {
+      method: "DELETE",
+      body: {
+        education: [index],
+      },
+    });
+
+    if (response.status === 204) data.value.education.splice(index, 1);
   };
 
   const addExperience = () => {
