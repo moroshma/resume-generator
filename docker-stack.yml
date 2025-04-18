@@ -119,10 +119,7 @@ services:
   portainer:
     image: portainer/portainer-ce:latest
     command: -H unix:///var/run/docker.sock
-    ports:
-      - target: 9443
-        published: 9443
-        protocol: tcp
+    # --- НЕ публикуем порты наружу ---
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
@@ -142,8 +139,8 @@ services:
         - "traefik.http.routers.portainer.entrypoints=web"
         - "traefik.http.routers.portainer.service=portainer-service"
         # --- Portainer работает по HTTPS (порт 9443), поэтому внутренний traefik должен обращаться к нему по HTTPS ---
-#        - "traefik.http.services.portainer-service.loadbalancer.server.port=9443"
-#        - "traefik.http.services.portainer-service.loadbalancer.server.scheme=https"
+        - "traefik.http.services.portainer-service.loadbalancer.server.port=9443"
+        - "traefik.http.services.portainer-service.loadbalancer.server.scheme=https"
         # Замечание: traefik-front перенаправляет запрос на внутренний traefik по HTTP,
         # а внутренний traefik уже общается с Portainer по HTTPS.
     <<: *logger
