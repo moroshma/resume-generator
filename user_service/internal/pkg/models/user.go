@@ -6,6 +6,13 @@ type User struct {
 	Password string `json:"password,required"`
 }
 
+type DeleteUserInfo struct {
+	UserID     uint   `json:"user_id,omitempty"`
+	Education  []uint `json:"education,omitempty"`
+	Experience []uint `json:"experience,omitempty"`
+	Languages  []uint `json:"languages,omitempty"`
+}
+
 type UserInfo struct {
 	UserID         uint           `json:"user_id,omitempty"`
 	Name           string         `json:"name,omitempty"`
@@ -53,6 +60,7 @@ type UserUseCaseI interface {
 	UpdateUserInfo(uint, UserInfo) (UserInfo, error)
 	GetUserInfo(id uint) (UserInfo, error)
 	Authenticate(User) (User, error)
+	DeleteUserInfo(info DeleteUserInfo) error
 }
 
 type UserRepositoryI interface {
@@ -61,4 +69,5 @@ type UserRepositoryI interface {
 	UpdateUserInfo(UserInfo) (UserInfo, error)
 	GetUserInfo(id uint) (UserInfo, error)
 	GetUserByLogin(login string) (User, error)
+	DeleteUserInfo(info DeleteUserInfo) error
 }

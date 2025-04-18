@@ -146,3 +146,27 @@ func (p tarantoolUserRepository) GetUserByLogin(login string) (models.User, erro
 
 	return retUser, nil
 }
+
+func (p tarantoolUserRepository) DeleteUserInfo(info models.DeleteUserInfo) error {
+	jsonData, err := json.Marshal(info)
+	if err != nil {
+		return fmt.Errorf("error marshalling user info: %w", err)
+	}
+
+	request := tarantool.NewCallRequest("delete_user_info").Args([]interface{}{string(jsonData)})
+	resp, err := p.conn.Do(request).Get()
+	if err != nil {
+		return fmt.Errorf("error calling delete_user_info: %w", err)
+	}
+
+	if len(resp) == 0 {
+		return errors.New("empty response from delete_user_info")
+	}
+
+	data := resp[0].(map[interface{}]interface{})
+	if len(data) == 0 {
+		return fmt.Errorf("invalid response format")
+	}
+
+	return checkErrorResponse(data)
+}

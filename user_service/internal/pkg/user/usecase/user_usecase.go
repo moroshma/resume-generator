@@ -71,3 +71,7 @@ func (uc *userUseCase) Authenticate(user models.User) (models.User, error) {
 
 	return authUser, nil
 }
+
+func (uc *userUseCase) DeleteUserInfo(info models.DeleteUserInfo) error {
+	return uc.userRepository.DeleteUserInfo(info)
+}

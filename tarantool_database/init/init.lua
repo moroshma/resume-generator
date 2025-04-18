@@ -488,6 +488,61 @@ function update_user_info(info)
     })
 end
 
+function delete_user_info(info)
+    if type(info) ~= 'string' then
+        return utils.raw_response({
+            status = 400,
+            error = "Info must be a JSON string"
+        })
+    end
+
+    local data = json.decode(info)
+    if not data then
+        return utils.raw_response({
+            status = 400,
+            error = "Invalid JSON format"
+        })
+    end
+
+    if not data.user_id then
+        return utils.raw_response({
+            status = 400,
+            error = "User_id is required"
+        })
+    end
+
+
+    if data.education and #data.education > 0 then
+        for _, edu_id in ipairs(data.education) do
+            local edu = box.space.education:get(edu_id)
+            if edu and edu[2] == data.user_id then
+                box.space.education:delete(edu_id)
+            end
+        end
+    end
+
+    if data.experience and #data.experience > 0 then
+        for _, exp_id in ipairs(data.experience) do
+            local exp = box.space.experience:get(exp_id)
+            if exp and exp[2] == data.user_id then
+                box.space.experience:delete(exp_id)
+            end
+        end
+    end
+
+    if data.languages and #data.languages > 0 then
+        for _, lang_id in ipairs(data.languages) do
+            local lang = box.space.languages:get(lang_id)
+            if lang and lang[2] == data.user_id then
+                box.space.languages:delete(lang_id)
+            end
+        end
+    end
+
+    return utils.raw_response({
+        status = 204,
+    })
+end
 -- Вызываем функции инициализации
 box.once('init', function()
     create_spaces()

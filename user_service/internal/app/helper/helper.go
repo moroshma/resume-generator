@@ -35,7 +35,12 @@ func InvalidJson() APIError {
 		Message: "Invalid JSON request data",
 	}
 }
-
+func NoContent() APIError {
+	return APIError{
+		Code:    http.StatusNoContent,
+		Message: "No content",
+	}
+}
 func InvalidToken() APIError {
 	return APIError{
 		Code:    http.StatusUnauthorized,
