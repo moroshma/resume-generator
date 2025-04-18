@@ -15,7 +15,7 @@ services:
     command:
       # --- Static Configuration ---
       - "--api.dashboard=true"
-      - "--log.level=DEBUG"
+      - "--log.level=INFO"
       # --- Entrypoints ---
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
