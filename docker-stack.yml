@@ -1,5 +1,3 @@
-version: "3.8"
-
 x-logger: &logger
   logging:
     driver: json-file
@@ -9,116 +7,66 @@ x-logger: &logger
       tag: "{{.ImageName}}|{{.Name}}"
 
 services:
-  # Traefik Front - Смотрит наружу, обрабатывает SSL для cvibe.ru
-  traefik-front:
-    image: traefik:v2.10
-    command:
-      - "--log.level=INFO"
-      # Точки входа: HTTP (80) и HTTPS (443)
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      # Автоматический редирект с HTTP на HTTPS
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      # Провайдер Docker (может быть полезен для dashboard или обнаружения internal)
-      - "--providers.docker=true"
-      - "--providers.docker.swarmMode=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=resumeapp_proxy"
-      # Провайдер File для загрузки динамической конфигурации (TLS, перенаправление)
-      - "--providers.file.filename=/run/configs/traefik_front_dynamic_conf" # Путь к конфигу внутри контейнера
-      - "--providers.file.watch=true"
-    ports:
-      # Открываем порты 80 и 443 на хосте
-      - target: 80
-        published: 80
-        protocol: tcp
-        mode: host
-      - target: 443
-        published: 443
-        protocol: tcp
-        mode: host
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    secrets:
-      # Подключаем SSL секреты
-      - source: traefik_cert
-        target: traefik_cert # Имя файла внутри /run/secrets/
-      - source: traefik_key
-        target: traefik_key
-    configs:
-      # Подключаем динамическую конфигурацию
-      - source: traefik_front_dynamic_conf
-        target: /run/configs/traefik_front_dynamic_conf
-        mode: 0444
-    networks:
-      - proxy # Нужен для связи с traefik
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints: [node.role == manager]
-    <<: *logger
-
-  # Traefik Internal - Обслуживает маршрутизацию внутри сети
+  # Traefik - Edge Router
   traefik:
     image: traefik:v2.10
     command:
       - "--api.dashboard=true"
-      - "--api.insecure=true" # Дашборд доступен внутри сети по порту 8080
-      - "--log.level=INFO"
-      # Провайдер Docker для обнаружения сервисов по меткам
+      - "--api.insecure=true"
+      - "--log.level=DEBUG"
       - "--providers.docker=true"
       - "--providers.docker.swarmMode=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=resumeapp_proxy" # Сеть, где искать сервисы
-      # Внутренняя точка входа (без SSL)
+      - "--providers.docker.network=proxy"
       - "--entrypoints.web.address=:80"
-    # НЕ публикуем порты наружу для внутреннего Traefik
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 8080
+        published: 8080
+        protocol: tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - proxy # Получает трафик от front и отправляет сервисам
+      - proxy
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
-      placement:
+      placement: # Рекомендуется размещать Traefik на manager ноде
         constraints: [node.role == manager]
     <<: *logger
 
-  # Portainer - Оставляем как есть, с открытым портом 9443
+  # Portainer - Docker Management UI
   portainer:
     image: portainer/portainer-ce:latest
     command: -H unix:///var/run/docker.sock
     ports:
       - target: 9443
-        published: 9443 # Порт остается открытым
+        published: 9443
         protocol: tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
     networks:
-      - proxy # Должен быть в proxy для возможного доступа через Traefik (если захочешь)
+      - proxy
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
-      placement:
+      placement: # Рекомендуется размещать Portainer на manager ноде
         constraints: [node.role == manager]
     <<: *logger
 
-  # --- Остальные сервисы (front, user-service, etc.) ---
-  # Метки (labels) остаются прежними, т.к. их читает traefik
-  # Убедись, что traefik.http.routers.*.entrypoints=web
-
+  # Front-end App
   front:
-    image: qwikman/resume-front:main
+    image: qwikman/resume-front:main # Используй конкретный тег или sha для воспроизводимости
     environment:
       - NODE_ENV=production
       - PORT=80
-      - BASE_HOST=http://traefik:80 # Общение через внутренний traefik
+      - BASE_HOST=http://traefik:80 # Возможно, лучше передавать публичный URL?
     networks:
       - proxy
     deploy:
@@ -130,30 +78,44 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy"
-        - "traefik.http.routers.front.entrypoints=web" # <- Важно: для internal traefik
+        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное (stackname_networkname)
+        - "traefik.http.routers.front.entrypoints=web"
         - "traefik.http.routers.front.rule=PathPrefix(`/`)"
         - "traefik.http.services.front.loadbalancer.server.port=80"
         - "traefik.http.routers.front.priority=1"
     <<: *logger
 
+  # Tarantool - база данных для user-service
   tarantool:
     image: tarantool/tarantool:3
+    # Убираем configs:
+    # configs:
+    #   - source: tarantool_init_lua
+    #     target: /opt/tarantool/init.lua
+    #   - source: tarantool_utils_lua
+    #     target: /opt/tarantool/utils/utils.lua
     volumes:
-      - /opt/resume-app/configs/tarantool/init.lua:/opt/tarantool/init.lua:ro
+      # Монтируем файлы с хоста. Пути на хосте нужно будет создать/обновить через CD pipeline.
+      - /opt/resume-app/configs/tarantool/init.lua:/opt/tarantool/init.lua:ro # :ro - read-only, если не нужно писать из контейнера
       - /opt/resume-app/configs/tarantool/utils/utils.lua:/opt/tarantool/utils/utils.lua:ro
-      - tarantool-data:/var/lib/tarantool
+      - tarantool-data:/var/lib/tarantool # Volume для данных остается
     environment:
+      # Путь LUA_PATH должен включать директории, где лежат скрипты ВНУТРИ контейнера
       - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua;/opt/tarantool/utils/?.lua;;
-    command: tarantool /opt/tarantool/init.lua
+    command: tarantool /opt/tarantool/init.lua # Команда остается прежней
     networks:
       - internal
+      # - proxy # Tarantool обычно не нужно выставлять наружу через proxy
     <<: *logger
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
+      # Можно ограничить размещение нодой, где лежат конфиги, если у тебя несколько manager нод
+      # placement:
+      #   constraints: [node.role == manager] # Или конкретная нода по лейблу
 
+  # User Service
   user-service:
     image: qwikman/user-service:main
     environment:
@@ -162,10 +124,10 @@ services:
     networks:
       - proxy
       - internal
-    depends_on:
+    depends_on: # Указывает на зависимость, хотя Swarm не гарантирует порядок запуска, это полезно для compose
       - tarantool
     deploy:
-      replicas: 1
+      replicas: 1 # Или 1, если пока не нужна высокая доступность
       update_config:
         parallelism: 1
         delay: 10s
@@ -173,25 +135,26 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy"
-        - "traefik.http.routers.user-service.entrypoints=web" # <- Важно: для internal traefik
+        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное
+        - "traefik.http.routers.user-service.entrypoints=web"
         - "traefik.http.routers.user-service.rule=PathPrefix(`/user_service`)"
         - "traefik.http.middlewares.strip-user-service.stripprefix.prefixes=/user_service"
         - "traefik.http.routers.user-service.middlewares=strip-user-service"
-        - "traefik.http.services.user-service.loadbalancer.server.port=8080"
+        - "traefik.http.services.user-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
     <<: *logger
 
+  # AI Service
   ai-service:
-    image: qwikman/ai-service:main
+    image: qwikman/ai-service:main # Используй конкретный тег или sha
     environment:
-      - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check
+      - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check # Используем имя сервиса и его порт
     networks:
       - proxy
-      - internal
+      - internal # Добавим, если нужно общаться с другими сервисами не через proxy
     depends_on:
       - user-service
     deploy:
-      replicas: 1
+      replicas: 1 # Или 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -199,20 +162,21 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy"
-        - "traefik.http.routers.ai-service.entrypoints=web" # <- Важно: для internal traefik
+        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное
+        - "traefik.http.routers.ai-service.entrypoints=web"
         - "traefik.http.routers.ai-service.rule=PathPrefix(`/ai_service`)"
         - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
         - "traefik.http.routers.ai-service.middlewares=strip-ai-service"
-        - "traefik.http.services.ai-service.loadbalancer.server.port=8080"
+        - "traefik.http.services.ai-service.loadbalancer.server.port=8080" # Порт, который слушает FastAPI внутри контейнера
     <<: *logger
 
+  # Minio Resume Service
   minio-resume-service:
     image: minio/minio:latest
     command: server --console-address ":9001" /data/
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9000" # Для доступа к API
+      - "9001:9001" # Для доступа к консоли
     environment:
       - MINIO_ROOT_USER_FILE=/run/secrets/minio_user
       - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
@@ -220,9 +184,10 @@ services:
       - minio_user
       - minio_password
     volumes:
-      - minio-storage:/data
+      - minio-storage:/data # Volume для данных
     networks:
       - internal
+      # - proxy # Обычно Minio не выставляют напрямую наружу, доступ через сервисы
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -236,9 +201,15 @@ services:
 
   postgres-resume-service:
     image: postgres:latest
+    # Убираем configs:
+    # configs:
+    #   - source: postgres_init_sql
+    #     target: /docker-entrypoint-initdb.d/init.sql
     volumes:
+      # Монтируем init.sql с хоста. Путь на хосте нужно будет создать/обновить через CD pipeline.
+      # ВАЖНО: Сработает только при ПУСТОМ каталоге /var/lib/postgresql/data
       - /opt/resume-app/configs/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data # Volume для данных остается
     environment:
       - POSTGRES_USER_FILE=/run/secrets/postgres_user
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
@@ -252,22 +223,26 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+      # Можно ограничить размещение нодой, где лежат конфиги
+      # placement:
+      #   constraints: [node.role == manager]
     <<: *logger
 
+  # Resume Storage Service
   resume-storage:
-    image: qwikman/resume-storage:main
+    image: qwikman/resume-storage:main # Используй конкретный тег или sha
     environment:
       - APP_ENV=prod
-      - DB_HOST=postgres-resume-service
-      - DB_PORT=5432
+      - DB_HOST=postgres-resume-service # Имя сервиса
+      - DB_PORT=5432 # Стандартный порт Postgres
       - DB_USER_FILE=/run/secrets/postgres_user
       - DB_PASSWORD_FILE=/run/secrets/postgres_password
       - DB_NAME=resume_db
-      - MINIO_ENDPOINT=minio-resume-service:9000
+      - MINIO_ENDPOINT=minio-resume-service:9000 # Имя сервиса Minio и его порт API
       - MINIO_ACCESS_KEY_FILE=/run/secrets/minio_user
       - MINIO_SECRET_KEY_FILE=/run/secrets/minio_password
       - MINIO_BUCKET=resumes
-      - MINIO_USE_SSL=false
+      - MINIO_USE_SSL=false # Minio работает по HTTP внутри Docker сети
     secrets:
       - postgres_user
       - postgres_password
@@ -280,7 +255,7 @@ services:
       - postgres-resume-service
       - minio-resume-service
     deploy:
-      replicas: 1
+      replicas: 1 # Или 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -288,24 +263,22 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.docker.network=resumeapp_proxy"
-        - "traefik.http.routers.resume-storage.entrypoints=web" # <- Важно: для internal traefik
+        - "traefik.docker.network=resumeapp_proxy" # Убедись, что имя сети правильное
+        - "traefik.http.routers.resume-storage.entrypoints=web"
         - "traefik.http.routers.resume-storage.rule=PathPrefix(`/resume_storage`)"
         - "traefik.http.middlewares.strip-resume-service.stripprefix.prefixes=/resume_storage"
         - "traefik.http.routers.resume-storage.middlewares=strip-resume-service"
-        - "traefik.http.services.resume-storage.loadbalancer.server.port=8080"
+        - "traefik.http.services.resume-storage.loadbalancer.server.port=8080" # Порт, который слушает FastAPI
     <<: *logger
 
-# Определения сетей, вольюмов, секретов и конфигов
 networks:
   proxy:
     driver: overlay
     attachable: true
-    name: resumeapp_proxy # Явно задаем имя сети
+    name: resumeapp_proxy
   internal:
     driver: overlay
-    attachable: true
-    name: resumeapp_internal # Явно задаем имя сети
+    name: resumeapp_internal
 
 volumes:
   minio-storage:
@@ -314,10 +287,6 @@ volumes:
   portainer_data:
 
 secrets:
-  traefik_cert:
-    external: true
-  traefik_key:
-    external: true
   minio_user:
     external: true
   minio_password:
@@ -327,6 +296,3 @@ secrets:
   postgres_password:
     external: true
 
-configs:
-  traefik_front_dynamic_conf:
-    external: true
