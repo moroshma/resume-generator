@@ -30,6 +30,7 @@ func NewUserHandlers(r *chi.Mux, userUsecase models.UserUseCaseI,
 		r.Get("/info", helper.Make(handlers.getInfo))
 		r.Put("/info", helper.Make(handlers.updateUserInfo))
 		r.Post("/info", helper.Make(handlers.createUserInfo))
+		r.Delete("/info", helper.Make(handlers.deleteUserInfo))
 	})
 }
 
@@ -154,4 +155,44 @@ func (handlers *userHandlers) createUserInfo(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	return nil
+}
+
+// createUserInfo creates a new user info entry.
+// @Summary Create a new user info
+// @Description Creates a new user info entry for the authenticated user.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.UserInfo true "User info details"
+// @Success 200 {string} string "OK"
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/v001/users/info [post]
+func (handlers *userHandlers) deleteUserInfo(w http.ResponseWriter, r *http.Request) error {
+	tokenCookie, err := r.Cookie(utils.AuthTokenName)
+	if err != nil {
+		return helper.NewAPIError(http.StatusUnauthorized, "Authorization cookie not found")
+	}
+	tokenString := strings.TrimPrefix(tokenCookie.Value, "Bearer ")
+	id, err := middleware.GetUserIDByAccessToken(tokenString)
+	if err != nil {
+		return err
+	}
+
+	var userInfoForDelete models.DeleteUserInfo
+	err = json.NewDecoder(r.Body).Decode(&userInfoForDelete)
+	if err != nil {
+		return helper.InvalidJson()
+	}
+	userInfoForDelete.UserID = id
+
+	err = handlers.userUseCase.DeleteUserInfo(userInfoForDelete)
+	if err != nil {
+		return helper.NewAPIError(http.StatusUnprocessableEntity, err.Error())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+	return helper.NoContent()
 }
