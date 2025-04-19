@@ -56,7 +56,7 @@ func (p *postgresProvider) GetAllResumesPreview(ctx context.Context, userID uint
 
 	for rows.Next() {
 		var resumeInfo models.ResumeInfo
-		err := rows.Scan(&resumeInfo.ResumeID, &resumeInfo.UserID, &resumeInfo.CreatedAt, &resumeInfo.Title)
+		err := rows.Scan(&resumeInfo.ResumeID, &resumeInfo.CreatedAt, &resumeInfo.Title)
 		if err != nil {
 			return nil, err
 		}
