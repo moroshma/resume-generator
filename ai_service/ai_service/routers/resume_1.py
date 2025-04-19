@@ -8,6 +8,9 @@ from fastapi import APIRouter, Body, HTTPException, status, Response
 # --- Annotation [routers/resume.py: 2] ---
 # Import the NeuralService class that handles the core logic (LLM calls).
 from ai_service.services.neural_1 import NeuralService
+#from ai_service.services import pdf_generator
+from ai_service.services.pdf_generator import PDFResumeGenerator
+from ai_service.services.pdf_generator import create_resume_pdf
 
 # --- Annotation [routers/resume.py: 3] ---
 # Import the Pydantic schemas for request/response validation and serialization.
@@ -141,7 +144,7 @@ async def generate_resume_final(user_answers: UserAnswers = Body(...)):
 # Define the endpoint to update an existing section.
 # Uses POST, takes 'UpdateRequest' schema in the body.
 # Returns 'UpdatedSkillsResponse' schema.
-@router.post("api/v001/resume/label/regenerate", response_model=UpdatedSkillsResponse)
+@router.post("/api/v001/resume/label/regenerate", response_model=UpdatedSkillsResponse)
 async def update_resume_section(update_req: UpdateRequest = Body(...)):
     """
     Updates an existing resume section (e.g., hard skills) by integrating new information.
@@ -168,7 +171,7 @@ async def update_resume_section(update_req: UpdateRequest = Body(...)):
             # detail=str(e)
         )
 
-@router.post("api/v001/resume/pdf/generate")
+@router.post("/api/v001/resume/pdf/generate")
 async def generate_resume_pdf(user_answers: UserAnswers = Body(...)):
     """
     Generates a PDF resume summary based on ALL provided answers.
@@ -195,6 +198,7 @@ async def generate_resume_pdf(user_answers: UserAnswers = Body(...)):
         # --- Annotation [routers/resume.py: 30] ---
         # Step 2: Call the PDF generator function with the original answers and the generated skills.
         pdf_bytes = create_resume_pdf(user_answers.answers, generated_skills)
+        pdf_bytes = bytes(pdf_bytes)
 
         # --- Annotation [routers/resume.py: 31] ---
         # Step 3: Create and return the FastAPI Response object.

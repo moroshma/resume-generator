@@ -40,7 +40,7 @@ class NeuralService:
         # --- Annotation [services/neural.py: 7] ---
         # Define the payload for the LLM API request according to its documentation.
         data = {
-            "model": "deepseek/deepseek-r1-zero:free", # Consider model choice based on task (coder good for JSON/instructions)
+            "model": "openai/o4-mini-high", # Consider model choice based on task (coder good for JSON/instructions)
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
@@ -128,7 +128,7 @@ class NeuralService:
         # --- Annotation [services/neural.py: 19] ---
         # Combine all questions and answers into a single text block for the LLM.
         user_text = "\n".join(f"Q: {k}\nA: {v}" for k, v in answers.items())
-        user_text += "\n\n---\nИзвлеки навыки из ответов выше."
+        user_text += '\n\n---\nИзвлеки навыки из ответов выше. Предоставь их в формате JSON-объекта: {"hard_skills": "C/C++, HTML, CSS, REST API", "experience": "Я работал в X компании на позиции... Я сопровождал весь проект от создания до выката в прод...", "technologies": "..."}'
 
         # --- Annotation [services/neural.py: 20] ---
         # Call the LLM API using the specific system prompt for SKILL EXTRACTION.
@@ -167,8 +167,10 @@ class NeuralService:
             # --- Annotation [services/neural.py: 27] ---
             # Handle cases where the LLM might wrap the JSON in markdown code blocks
             # AND remove potential trailing artifacts like \boxed{...}
-            processed_response = raw_response.strip()[6:]
-
+            processed_response = raw_response.strip()
+            if '\\boxed' in processed_response:
+                index = processed_response.find('\\boxed')
+                processed_response = processed_response[index + len('\\boxed'):]
             # Remove markdown blocks first
             if processed_response.startswith("```json"):
                 processed_response = processed_response[7:-3].strip()
