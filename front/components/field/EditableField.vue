@@ -1,5 +1,5 @@
 <template>
-  <div class="editable-field" @dblclick="enableEdit">
+  <div class="editable-field" @click="enableEdit">
     <div v-if="!isEditing" class="view-mode">
       <span v-if="icon" class="icon">{{ icon }}</span>
       {{ model || placeholder }}
