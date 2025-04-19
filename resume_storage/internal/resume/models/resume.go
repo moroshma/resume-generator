@@ -14,7 +14,7 @@ type Resume struct {
 
 type ResumeInfo struct {
 	ResumeID  uint      `json:"resume_id"`
-	UserID    uint      `json:"user_id"`
+	UserID    *uint     `json:"user_id"`
 	CreatedAt time.Time `json:"created_at"`
 	Title     string    `json:"title"`
 }
