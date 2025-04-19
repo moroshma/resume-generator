@@ -147,7 +147,10 @@ services:
   ai-service:
     image: qwikman/ai-service:main # Используй конкретный тег или sha
     environment:
-      - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check # Используем имя сервиса и его порт
+      - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check
+      - OPENROUTER_API_KEY=/run/secrets/gpt_token
+    secrets:
+      - gpt_token
     networks:
       - proxy
       - internal # Добавим, если нужно общаться с другими сервисами не через proxy
@@ -295,4 +298,5 @@ secrets:
     external: true
   postgres_password:
     external: true
-
+  gpt_token:
+    external: true
