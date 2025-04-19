@@ -17,6 +17,8 @@ interface Education {
   degree: string;
   from: string;
   to: string;
+
+  education_id?: number;
 }
 
 interface Experience {
@@ -25,10 +27,12 @@ interface Experience {
   from: string;
   to: string;
   description: string;
+  experience_id?: number;
 }
 
 interface Language {
   language: string;
+  language_id?: number;
 }
 
 export const useProfile = () => {
@@ -135,15 +139,19 @@ export const useProfile = () => {
     });
   };
 
-  const removeEducation = async (index: number) => {
+  const removeEducation = async (id: number) => {
     const response = await $fetch.raw("/api/user", {
       method: "DELETE",
       body: {
-        education: [index],
+        education: [id],
       },
     });
 
-    if (response.status === 204) data.value.education.splice(index, 1);
+    if (response.status === 204) {
+      data.value.education = data.value.education.filter(
+        (education) => education.education_id !== id
+      );
+    }
   };
 
   const addExperience = () => {
@@ -156,11 +164,35 @@ export const useProfile = () => {
     });
   };
 
-  const removeExperience = (index: number) => {
-    data.value.experience.splice(index, 1);
+  const removeExperience = async (id: number) => {
+    const response = await $fetch.raw("/api/user", {
+      method: "DELETE",
+      body: {
+        experience: [id],
+      },
+    });
+
+    if (response.status === 204) {
+      data.value.experience = data.value.experience.filter(
+        (experience) => experience.experience_id !== id
+      );
+    }
   };
 
-  const updateLanguages = (langs: string[]) => {
+  const updateLanguages = async (langs: string[]) => {
+    const removedLanguage = data.value.languages.find(
+      (language) => !langs.includes(language.language)
+    );
+
+    if (removedLanguage) {
+      await $fetch.raw("/api/user", {
+        method: "DELETE",
+        body: {
+          languages: [removedLanguage.language_id],
+        },
+      });
+    }
+
     data.value.languages = langs.map((language) => ({
       language,
       ...data.value.languages.find((l) => l.language === language),

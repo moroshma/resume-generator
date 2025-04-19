@@ -45,7 +45,10 @@
           >
             <h3 class="section-title">
               <span>Образование</span>
-              <button class="btn delete-btn" @click="removeEducation(index)">
+              <button
+                class="btn delete-btn"
+                @click="removeEducation(edu.education_id)"
+              >
                 ×
               </button>
             </h3>
@@ -71,7 +74,10 @@
           >
             <h3 class="section-title">
               <span>Опыт работы</span>
-              <button class="btn delete-btn" @click="removeExperience(index)">
+              <button
+                class="btn delete-btn"
+                @click="removeExperience(exp.experience_id)"
+              >
                 ×
               </button>
             </h3>
