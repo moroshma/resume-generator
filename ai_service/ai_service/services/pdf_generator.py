@@ -1,5 +1,5 @@
 # ai_service/services/pdf_generator.py
-
+import os
 from fpdf import FPDF
 from typing import Dict, List, Any
 import datetime
@@ -14,36 +14,45 @@ FONT_SIZE_HEADING = 12
 FONT_SIZE_NORMAL = 10
 LINE_HEIGHT_MULTIPLIER = 1.5 # Adjust spacing between lines
 
+
+DEJAVU_FONT_PATH_DIR = "/usr/share/fonts/truetype/dejavu/"
+DEJAVU_FONT_REGULAR = os.path.join(DEJAVU_FONT_PATH_DIR, 'DejaVuSans.ttf')
+DEJAVU_FONT_BOLD = os.path.join(DEJAVU_FONT_PATH_DIR, 'DejaVuSans-Bold.ttf')
+
+
 class PDFResumeGenerator:
 
     def __init__(self):
-        # --- Annotation [services/pdf_generator.py: 2] ---
-        # Initialize FPDF object. 'P' for portrait, 'mm' for units, 'A4' for size.
+        global FONT_FAMILY # Allow modification of FONT_FAMILY on fallback
         self.pdf = FPDF('P', 'mm', 'A4')
-        # --- Annotation [services/pdf_generator.py: 3] ---
-        # Add the DejaVu font. Required for Unicode characters like Cyrillic.
-        # The .ttf file should be available in the system paths after installation via apt-get.
-        # Use the regular, bold, italic, bold-italic variants if needed.
-        # We'll just use Regular and Bold here.
-        try:
-            self.pdf.add_font(FONT_FAMILY, '', 'DejaVuSans.ttf', uni=True)
-            self.pdf.add_font(FONT_FAMILY, FONT_STYLE_BOLD, 'DejaVuSans-Bold.ttf', uni=True)
-        except RuntimeError as e:
-            print(f"Warning: Could not load DejaVu font ({e}). Falling back to default Arial.")
-            print("Ensure 'fonts-dejavu-core' is installed in the Docker image.")
-            # Fallback to a standard font if DejaVu isn't found (may not support Cyrillic well)
-            global FONT_FAMILY
-            FONT_FAMILY = "Arial"
-            # Arial is usually built-in, no add_font needed unless variants are missing
 
-        # --- Annotation [services/pdf_generator.py: 4] ---
-        # Add the first page automatically.
+        # --- MODIFICATION START ---
+        # Check if the font files actually exist before trying to add them
+        font_regular_exists = os.path.exists(DEJAVU_FONT_REGULAR)
+        font_bold_exists = os.path.exists(DEJAVU_FONT_BOLD)
+
+        if font_regular_exists and font_bold_exists:
+            try:
+                # Provide the full path to add_font
+                self.pdf.add_font(FONT_FAMILY, '', DEJAVU_FONT_REGULAR, uni=True)
+                self.pdf.add_font(FONT_FAMILY, FONT_STYLE_BOLD, DEJAVU_FONT_BOLD, uni=True)
+                print(f"Successfully loaded DejaVu fonts from {DEJAVU_FONT_PATH_DIR}") # Added log
+            except RuntimeError as e:
+                print(f"Error loading DejaVu font even though files exist: {e}. Falling back.")
+                FONT_FAMILY = "Arial" # Fallback
+        else:
+            # Log which file is missing
+            if not font_regular_exists:
+                 print(f"Warning: Font file not found at {DEJAVU_FONT_REGULAR}")
+            if not font_bold_exists:
+                 print(f"Warning: Font file not found at {DEJAVU_FONT_BOLD}")
+            print("Falling back to default Arial font.")
+            print("Ensure 'fonts-dejavu-core' is installed correctly in the Docker image and the path is correct.")
+            FONT_FAMILY = "Arial" # Fallback
+        # --- MODIFICATION END ---
+
         self.pdf.add_page()
-        # --- Annotation [services/pdf_generator.py: 5] ---
-        # Set default font for the document.
         self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_NORMAL)
-        # --- Annotation [services/pdf_generator.py: 6] ---
-        # Calculate line height based on font size for consistent spacing.
         self.line_height = FONT_SIZE_NORMAL * LINE_HEIGHT_MULTIPLIER
 
     def _add_section_heading(self, title: str):
