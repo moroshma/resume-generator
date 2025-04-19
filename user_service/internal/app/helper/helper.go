@@ -35,6 +35,45 @@ func InvalidJson() APIError {
 		Message: "Invalid JSON request data",
 	}
 }
+func NoContent() APIError {
+	return APIError{
+		Code:    http.StatusNoContent,
+		Message: "No content",
+	}
+}
+func InvalidToken() APIError {
+	return APIError{
+		Code:    http.StatusUnauthorized,
+		Message: "Invalid token",
+	}
+}
+
+func ValidateLoginOrPassword() APIError {
+	return APIError{
+		Code:    http.StatusBadRequest,
+		Message: "Login and password must be at least 6 characters long",
+	}
+}
+
+func InvalidCredentials() APIError {
+	return APIError{
+		Code:    http.StatusUnauthorized,
+		Message: "Invalid credentials",
+	}
+}
+func UserAlreadyExists() APIError {
+	return APIError{
+		Code:    http.StatusConflict,
+		Message: "User with this login already exists",
+	}
+}
+
+func UserInfoNotFound() APIError {
+	return APIError{
+		Code:    http.StatusNoContent,
+		Message: "User not found",
+	}
+}
 
 type APIFunc func(w http.ResponseWriter, r *http.Request) error
 
@@ -46,7 +85,7 @@ func Make(h APIFunc) http.HandlerFunc {
 			} else {
 				errResp := map[string]any{
 					"status":  http.StatusInternalServerError,
-					"message": "Internal Server Error",
+					"message": fmt.Sprintf("Internal Server Error, err%v:", err),
 				}
 				writeJSON(w, apiErr.Code, errResp)
 			}

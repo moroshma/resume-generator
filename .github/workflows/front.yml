@@ -1,0 +1,83 @@
+# --- START OF FILE workflows/front.yml ---
+name: Build and Push Frontend
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ 'v*.*.*' ]
+    # paths:
+    #  - 'front/**'
+  pull_request:
+    branches: [ "main", "master" ]
+    # paths:
+    #  - 'front/**'
+
+env:
+  SERVICE_NAME: front
+  DOCKER_HUB_REPO: qwikman/resume-front
+  SERVICE_PATH: ./front # Путь к директории сервиса
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+      build_skipped: ${{ steps.changes.outputs.src == 'false' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Используем v4
+        with:
+          fetch-depth: 0 # Необходимо для paths-filter при push
+
+      - name: Check for changes in service directory
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            src:
+              - '${{ env.SERVICE_PATH }}/**'
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: steps.changes.outputs.src == 'true' && github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_HUB_REPO }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+
+      - name: Build and push Docker image
+        if: steps.changes.outputs.src == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.SERVICE_PATH }}
+          file: ${{ env.SERVICE_PATH }}/Dockerfile
+          target: prod # Убедись, что target prod актуален
+          platforms: linux/amd64 # <- Только amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Notify build skipped
+        if: steps.changes.outputs.src == 'false'
+        run: echo "No changes detected in ${{ env.SERVICE_PATH }}, build skipped."
+# --- END OF FILE workflows/front.yml ---

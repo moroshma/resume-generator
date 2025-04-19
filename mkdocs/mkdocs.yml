@@ -83,10 +83,12 @@ nav:
       - проверка авторизации: auth/auth_check.md
       - логин: auth/auth_login.md
       - регистрация: auth/auth_register.md
+      - выход из системы: auth/auth_logout.md
       - получение access token по refresh token: auth/auth_refresh.md
       - получение информации о пользователе: auth/get_users_info.md
       - создание информации о пользователе: auth/post_users_info.md
       - изменение информации о пользователе: auth/put_users_info.md
+      - удаление информации о пользователе: auth/delete_user_info.md
     - resume_process:
         - Получение базовых вопросов: resume_process/get_basic_questions.md
         - Получение доп. вопросов: resume_process/get_followup_questions.md

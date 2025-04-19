@@ -1,5 +1,4 @@
 services:
-  # Traefik сервис
   traefik:
     image: traefik:v2.10
     command:
@@ -14,21 +13,53 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
 
-  # user service
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      target: prod
+    depends_on:
+      - user-service
+      - ai-service
+      - resume-storage
+    environment:
+      - NODE_ENV=production
+      - PORT=80
+      - BASE_HOST=http://traefik:80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.front.rule=PathPrefix(`/`)"
+      - "traefik.http.services.front.loadbalancer.server.port=80"
+      - "traefik.http.routers.front.priority=1"
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
   tarantool:
     image: tarantool/tarantool:3
+    ports:
+      - 3301:3301
     volumes:
       - ./tarantool_database/init:/opt/tarantool
       - ./tarantool_database/utils:/opt/tarantool/utils
       - tarantool-data:/var/lib/tarantool
     environment:
-      - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua
+      - LUA_PATH=/opt/tarantool/?.lua;/opt/tarantool/?/init.lua;/opt/tarantool/utils/?.lua;;
     command: tarantool /opt/tarantool/init.lua
     logging:
       driver: "json-file"
       options:
         max-size: "200k"
         max-file: "10"
+    restart: unless-stopped
 
   user-service:
     build:
@@ -45,15 +76,13 @@ services:
       - "traefik.http.services.user-service.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.strip-user-service.stripprefix.prefixes=/user_service"
       - "traefik.http.routers.user-service.middlewares=strip-user-service"
+    restart: unless-stopped
 
-  # AI service
   ai-service:
     build:
       context: ./ai_service
       dockerfile: Dockerfile
     container_name: ai_service_app
-    env_file:
-      - ai_service/.env
     environment:
       - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check
     restart: unless-stopped
@@ -66,7 +95,6 @@ services:
       - "traefik.http.middlewares.strip-ai-service.stripprefix.prefixes=/ai_service"
       - "traefik.http.routers.ai-service.middlewares=strip-ai-service"
 
-  # Resume storage
   minio-resume-service:
     image: minio/minio:latest
     command: server --console-address ":9001" /data/
@@ -79,10 +107,11 @@ services:
     volumes:
       - minio-storage:/data
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
+    restart: unless-stopped
 
   postgres-resume-service:
     image: postgres:latest
@@ -91,11 +120,9 @@ services:
       POSTGRES_USER: resume
       POSTGRES_PASSWORD: generator
       POSTGRES_DB: resume_db
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./resume_storage/migrate:/docker-entrypoint-initdb.d
+      - ./resume_storage/migrate/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   resume-storage:
     build:
@@ -103,6 +130,16 @@ services:
       dockerfile: Dockerfile
     environment:
       - APP_ENV=prod
+      - DB_HOST=postgres-resume-service
+      - DB_PORT=5432
+      - DB_USER=resume
+      - DB_PASSWORD=generator
+      - DB_NAME=resume_db
+      - MINIO_ENDPOINT=minio-resume-service:9000
+      - MINIO_ACCESS_KEY=resume
+      - MINIO_SECRET_KEY=generator
+      - MINIO_BUCKET=resumes
+      - MINIO_USE_SSL=false
     depends_on:
       - postgres-resume-service
       - minio-resume-service
@@ -112,8 +149,10 @@ services:
       - "traefik.http.services.resume-storage.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.strip-resume-service.stripprefix.prefixes=/resume_storage"
       - "traefik.http.routers.resume-storage.middlewares=strip-resume-service"
+    restart: unless-stopped
 
 volumes:
   minio-storage:
   postgres-data:
   tarantool-data:
+  portainer_data:

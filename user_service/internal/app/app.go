@@ -66,21 +66,20 @@ func Run() {
 		if err == nil {
 			break
 		}
-		log.Printf("Failed to connect: %s. Retrying in 1 second...", err)
+		log.Printf("Failed to connect: %s. Retrying in 1 second...:      Host: %v", err, dbHost)
 		time.Sleep(1 * time.Second)
 	}
 
 	if err != nil {
 		log.Fatalf("Failed to connect after 5 attempts: %s", err)
 	}
-
 	defer conn.Close()
 
 	tokenUseCase := token_usecase.NewTokenUseCase()
 	userUseCase := user_usecase.NewUserUseCase(user_repository.NewTarantoolUserRepository(conn))
 
 	auth_handlers.NewAuthHandlers(r, userUseCase, tokenUseCase)
-	user_handlers.NewUserHandlers(r, userUseCase)
+	user_handlers.NewUserHandlers(r, userUseCase, tokenUseCase)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/user_service/swagger/doc.json"),

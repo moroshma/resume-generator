@@ -6,7 +6,6 @@ import "github.com/moroshma/resume-generator/user_service/internal/app"
 // @version         1.0
 // @description     This is a sample server celler server.
 // @termsOfService  http://swagger.io/terms/
-
 // @host localhost:8099
 
 // @externalDocs.description  OpenAPI

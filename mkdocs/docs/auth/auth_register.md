@@ -8,6 +8,7 @@
     POST| api/v001/auth/register
 ```
 
+
 ```json
 {
   "login": "string",

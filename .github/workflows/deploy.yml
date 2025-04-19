@@ -1,0 +1,119 @@
+name: Deploy Application to Swarm
+
+on:
+  workflow_run:
+    workflows:
+      - "Build and Push AI Service"
+      - "Build and Push Frontend"
+      - "Build and Push resume-storage"
+      - "Build and Push User Service"
+    types:
+      - completed
+    branches:
+      - main
+      - master
+
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Deploy to Docker Swarm
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Keys
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+
+      - name: Add known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SWARM_HOST }} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Create config directories on Swarm Manager
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SWARM_HOST }}
+          username: ${{ secrets.SWARM_USER }}
+          key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "Creating remote directories..."
+            mkdir -vp /opt/resume-app/configs/tarantool/utils
+            mkdir -vp /opt/resume-app/configs/postgres
+            echo "Remote directories created."
+            # Установим права, если нужно (например, если пользователь SSH не root)
+            # sudo chown -R $(id -u):$(id -g) /opt/resume-app # Пример, зависит от настроек сервера
+
+      - name: Copy Config Files to Swarm Manager
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SWARM_HOST }}
+          username: ${{ secrets.SWARM_USER }}
+          key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+          port: 22
+          source: "tarantool_database/init/init.lua,tarantool_database/utils/utils.lua"
+          target: "/opt/resume-app/configs/tarantool/"
+          strip_components: 2 # Убирает 'tarantool_database/init' и 'tarantool_database/utils' из пути назначения
+
+      - name: Copy nested Tarantool utils file # Отдельный шаг для вложенной директории
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SWARM_HOST }}
+          username: ${{ secrets.SWARM_USER }}
+          key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+          port: 22
+          source: "tarantool_database/utils/utils.lua"
+          target: "/opt/resume-app/configs/tarantool/utils/"
+          strip_components: 2 # Убирает 'tarantool_database/utils'
+
+      - name: Copy PostgreSQL Config File to Swarm Manager
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SWARM_HOST }}
+          username: ${{ secrets.SWARM_USER }}
+          key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+          port: 22
+          source: "resume_storage/migrate/init.sql"
+          target: "/opt/resume-app/configs/postgres/"
+          strip_components: 2 # Убирает 'resume_storage/migrate'
+
+      - name: Copy Docker Stack File to Swarm Manager
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SWARM_HOST }}
+          username: ${{ secrets.SWARM_USER }}
+          key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+          port: 22
+          source: "docker-stack.yml"
+          target: "/opt/resume-app/" # Кладем рядом с конфигами для простоты
+
+      - name: Deploy Docker Stack via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SWARM_HOST }}
+          username: ${{ secrets.SWARM_USER }}
+          key: ${{ secrets.SWARM_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd /opt/resume-app # Переходим в директорию со stack файлом
+
+            # Логинимся в Docker Hub (опционально, но рекомендуется)
+            echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+
+            # Развертываем/обновляем стек
+            # 'resumeapp' - это имя стека. Должно совпадать с префиксом сетей.
+            docker stack deploy --compose-file docker-stack.yml --with-registry-auth resumeapp
+
+            # Опционально: можно добавить docker service update --force <service_name>
+            # если нужно гарантированно пересоздать контейнеры tarantool/postgres
+            # docker service update --force resumeapp_tarantool
+            # docker service update --force resumeapp_postgres-resume-service
+            # Но обычно docker stack deploy сам обновит сервисы, чья конфигурация изменилась (volumes)
+
+            echo "Stack deployment initiated."

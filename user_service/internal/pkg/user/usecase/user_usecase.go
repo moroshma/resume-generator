@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"fmt"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
 	"golang.org/x/crypto/bcrypt"
 	"regexp"
@@ -20,16 +21,18 @@ func NewUserUseCase(userRepository models.UserRepositoryI) models.UserUseCaseI {
 	return &userUseCase{userRepository}
 }
 
+var WrongLoginOrPassword = errors.New("wrong login or password")
+
 func (uc *userUseCase) CreateUser(user models.User) (uint, error) {
 	if len(user.Password) <= 6 || len(user.Login) < 4 {
-		return 0, errors.New("password or login is too short")
+		return 0, fmt.Errorf("%w", WrongLoginOrPassword)
 	}
 
 	if !loginRegex.MatchString(user.Login) {
-		return 0, errors.New("invalid login format")
+		return 0, fmt.Errorf("%w", WrongLoginOrPassword)
 	}
 	if !passwordRegex.MatchString(user.Password) {
-		return 0, errors.New("invalid password format")
+		return 0, fmt.Errorf("%w", WrongLoginOrPassword)
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -67,4 +70,8 @@ func (uc *userUseCase) Authenticate(user models.User) (models.User, error) {
 	}
 
 	return authUser, nil
+}
+
+func (uc *userUseCase) DeleteUserInfo(info models.DeleteUserInfo) error {
+	return uc.userRepository.DeleteUserInfo(info)
 }

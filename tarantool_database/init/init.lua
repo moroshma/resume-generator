@@ -38,8 +38,8 @@ local function create_spaces()
     })
     user_info:format({
         { name = 'user_id', type = 'unsigned' },
-        { name = 'name', type = 'string' },
-        { name = 'surname', type = 'string' },
+        { name = 'name', type = 'string', is_nullable = true },
+        { name = 'surname', type = 'string', is_nullable = true },
         { name = 'email', type = 'string', is_nullable = true },
         { name = 'github', type = 'string', is_nullable = true },
         { name = 'phone_number', type = 'string', is_nullable = true },
@@ -54,7 +54,6 @@ local function create_spaces()
         unique = true
     })
 
-    -- Спейс для образования
     local education = box.schema.space.create('education', {
         if_not_exists = true,
     })
@@ -78,7 +77,6 @@ local function create_spaces()
         if_not_exists = true
     })
 
-    -- Спейс для опыта работы
     local experience = box.schema.space.create('experience', {
         if_not_exists = true,
     })
@@ -176,32 +174,32 @@ end
 -- Функция для создания или обновления информации о пользователе
 function create_user_info(info)
     if type(info) ~= 'string' then
-        return utils.raw_response({ error = "Info must be a JSON string" })
+        return utils.raw_response({
+            status = 400,
+            error = "Info must be a JSON string"
+        })
     end
 
     local data = json.decode(info)
     if not data then
-        return utils.raw_response({ error = "Invalid JSON format" })
-    end
-
-    if not data.name or not data.surname then
-        return utils.raw_response({ error = "Name and surname are required" })
+        return utils.raw_response({
+            status = 400,
+            error = "Invalid JSON format" })
     end
 
     -- Генерируем новый ID пользователя если он не предоставлен
     local user_id = data.user_id or get_next_id('user_info')
-
     -- Создаем основную информацию
     box.space.user_info:insert({
         user_id,
-        data.name,
-        data.surname,
-        data.email or '',
-        data.github or '',
-        data.phone_number or '',
-        data.location or '',
-        (data.social_profiles and data.social_profiles.linkedin) or '',
-        (data.social_profiles and data.social_profiles.telegram) or ''
+        data.name or box.NULL,
+        data.surname or box.NULL,
+        data.email or box.NULL,
+        data.github or box.NULL,
+        data.phone_number or box.NULL,
+        data.location or box.NULL,
+        (data.social_profiles and data.social_profiles.linkedin) or box.NULL,
+        (data.social_profiles and data.social_profiles.telegram) or box.NULL
     })
 
     -- Добавляем образование
@@ -225,7 +223,9 @@ function create_user_info(info)
     if data.experience then
         for _, exp in ipairs(data.experience) do
             if not exp.company or not exp.role or not exp.from then
-                return utils.raw_response({ error = "Company, role and from date are required for experience" })
+                return utils.raw_response({
+                    status = 400,
+                    error = "Company, role and from date are required for experience" })
             end
             box.space.experience:insert({
                 get_next_id('experience'),
@@ -268,7 +268,7 @@ function get_user_info(user_id)
 
     local info = box.space.user_info:get(user_id)
     if not info then
-        return utils.raw_response({ error = "User info not found" })
+        return utils.raw_response({ error = "user info not found" })
     end
 
     local result = {
@@ -348,22 +348,30 @@ end
 -- New function to update user info based on provided JSON
 function update_user_info(info)
     if type(info) ~= 'string' then
-        return utils.raw_response({ error = "Info must be a JSON string" })
+        return utils.raw_response({
+            status = 400,
+            error = "Info must be a JSON string" })
     end
 
     local data = json.decode(info)
     if not data then
-        return utils.raw_response({ error = "Invalid JSON format" })
+        return utils.raw_response({
+            status = 400,
+            error = "Invalid JSON format" })
     end
 
     if not data.user_id then
-        return utils.raw_response({ error = "User_id is required" })
+        return utils.raw_response({
+            status = 400,
+            error = "User_id is required" })
     end
 
     local user_info_space = box.space.user_info
     local user = user_info_space:get(data.user_id)
     if not user then
-        return utils.raw_response({ error = "User not found" })
+        return utils.raw_response({
+            status = 204,
+            resp = "User not found" })
     end
 
     -- Update main user info
@@ -480,6 +488,61 @@ function update_user_info(info)
     })
 end
 
+function delete_user_info(info)
+    if type(info) ~= 'string' then
+        return utils.raw_response({
+            status = 400,
+            error = "Info must be a JSON string"
+        })
+    end
+
+    local data = json.decode(info)
+    if not data then
+        return utils.raw_response({
+            status = 400,
+            error = "Invalid JSON format"
+        })
+    end
+
+    if not data.user_id then
+        return utils.raw_response({
+            status = 400,
+            error = "User_id is required"
+        })
+    end
+
+
+    if data.education and #data.education > 0 then
+        for _, edu_id in ipairs(data.education) do
+            local edu = box.space.education:get(edu_id)
+            if edu and edu[2] == data.user_id then
+                box.space.education:delete(edu_id)
+            end
+        end
+    end
+
+    if data.experience and #data.experience > 0 then
+        for _, exp_id in ipairs(data.experience) do
+            local exp = box.space.experience:get(exp_id)
+            if exp and exp[2] == data.user_id then
+                box.space.experience:delete(exp_id)
+            end
+        end
+    end
+
+    if data.languages and #data.languages > 0 then
+        for _, lang_id in ipairs(data.languages) do
+            local lang = box.space.languages:get(lang_id)
+            if lang and lang[2] == data.user_id then
+                box.space.languages:delete(lang_id)
+            end
+        end
+    end
+
+    return utils.raw_response({
+        status = 204,
+    })
+end
 -- Вызываем функции инициализации
 box.once('init', function()
     create_spaces()

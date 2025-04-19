@@ -3,8 +3,11 @@ package middleware
 import (
 	"errors"
 	"fmt"
-	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/token/usecase"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/utils"
+	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
+	"log/slog"
 	"net/http"
+
 	"strconv"
 	"strings"
 
@@ -17,125 +20,61 @@ type claims struct {
 
 var SECRET = []byte("private-key")
 
-var client http.Client
-
-func findCookieByName(cookies []*http.Cookie, name string) *http.Cookie {
-	for _, cookie := range cookies {
-		if cookie.Name == name {
-			return cookie
-		}
-	}
-	return nil
-}
-
-func getAccessTokenByRefreshToken(refreshToken string) (string, error) {
-	req, err := http.NewRequest("GET", "http://gateway/api/v001/token/refresh", nil)
-	if err != nil {
-		return "", err
-	}
-
-	req.AddCookie(&http.Cookie{
-		Name:  "Refresh-Token",
-		Value: refreshToken,
-	})
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errors.New(fmt.Sprintf("Unexpected status code. Expected 200, got %d", resp.StatusCode))
-	}
-
-	cookie := findCookieByName(resp.Cookies(), "Authorization")
-	if cookie != nil {
-		return cookie.Value, nil
-	}
-
-	return "", errors.New("unexpected error")
-}
-func AuthMiddleware() func(http.Handler) http.Handler {
+func AuthMiddleware(tokenUseCase models.TokenUsecaseI) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			refreshToken, err := r.Cookie("Refresh-Token")
 			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				http.Error(w, fmt.Sprintf("Unauthorized Refresh-Token error:%v", err), http.StatusUnauthorized)
 				return
 			}
 
 			_, err = jwt.ParseWithClaims(refreshToken.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 				return SECRET, nil
 			})
+
 			if err != nil {
+				utils.ClearAccessTokenCookie(w)
+				utils.ClearRefreshTokenCookie(w)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			authCookie, err := r.Cookie("Authorization")
-			var tokenString string
+			_, err = r.Cookie(utils.AuthTokenName)
 			if errors.Is(err, http.ErrNoCookie) {
-				tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
+				userID, err := tokenUseCase.GetUserIDByRefreshToken(refreshToken.Value)
 				if err != nil {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					utils.ClearAccessTokenCookie(w)
+					utils.ClearRefreshTokenCookie(w)
+					http.Error(w, "Unauthorized: Invalid refresh token", http.StatusUnauthorized)
+					return
+				}
+				tokenString, err := tokenUseCase.GenerateAccessTokenByUserID(userID)
+				if err != nil {
+					http.Error(w, "Unauthorized: Failed to generate access token", http.StatusUnauthorized)
+					return
+				}
+				utils.SetAccessTokenCookie(w, tokenString)
+
+				newRefreshToken, tokenErr := tokenUseCase.GenerateRefreshTokenByUserID(userID)
+				if tokenErr != nil {
+					http.Error(w, "Internal Server Error: Could not refresh session fully", http.StatusInternalServerError)
 					return
 				}
 
-				http.SetCookie(w, &http.Cookie{
-					Name:     "Authorization",
-					Value:    tokenString,
-					Path:     "/",
-					HttpOnly: true,
-					MaxAge:   31536000,
-				})
-			} else {
-				tokenString = strings.TrimPrefix(authCookie.Value, "Bearer ")
-				parsedToken, err := jwt.ParseWithClaims(tokenString, &claims{}, func(token *jwt.Token) (interface{}, error) {
-					return SECRET, nil
-				})
+				utils.SetAccessTokenRequestCookie(r, newRefreshToken)
 
-				if err != nil || !parsedToken.Valid {
-					tokenString, err = getAccessTokenByRefreshToken(refreshToken.Value)
-					if err != nil {
-						http.Error(w, "Unauthorized", http.StatusUnauthorized)
-						return
-					}
-
-					http.SetCookie(w, &http.Cookie{
-						Name:     "Authorization",
-						Value:    tokenString,
-						Path:     "/",
-						HttpOnly: true,
-						MaxAge:   31536000,
-					})
-
-					userID, err := GetUserIDByAccessToken(tokenString)
-					if err != nil {
-						http.Error(w, "Unauthorized", http.StatusUnauthorized)
-						return
-					}
-					newRefreshToken, err := usecase.NewTokenUseCase().GenerateRefreshTokenByUserID(userID)
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusUnauthorized)
-						return
-					}
-					http.SetCookie(w, &http.Cookie{
-						Name:     "Refresh-Token",
-						Value:    newRefreshToken,
-						Path:     "/",
-						HttpOnly: true,
-					})
-				}
+				utils.SetRefreshTokenCookie(w, newRefreshToken)
 			}
 
 			next.ServeHTTP(w, r)
 		})
 	}
 }
+
 func GetUserIDByAccessToken(accessToken string) (uint, error) {
 	accessToken = strings.TrimPrefix(accessToken, "Bearer ")
-
+	slog.Any("-----------AccessToken:  ", accessToken)
 	token, err := jwt.ParseWithClaims(accessToken, &claims{}, func(token *jwt.Token) (interface{}, error) {
 		return SECRET, nil
 	})
