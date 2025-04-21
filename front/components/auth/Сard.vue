@@ -1,6 +1,6 @@
 <template>
-  <form class="auth-card" @submit.prevent>
-    <div class="forms-container" :class="formType">
+  <form ref="form" class="auth-card" @submit.prevent>
+    <div ref="formsContainer" class="forms-container" :class="formType">
       <div class="form login-form">
         <h2>Вход</h2>
         <input type="login" v-model="userAuth.login" placeholder="Email" />
@@ -10,6 +10,7 @@
           placeholder="Пароль"
         />
         <button
+          ref="loginSubmit"
           type="submit"
           class="primary-btn"
           @click="emit('submit', { ...userAuth, type: 'login' })"
@@ -36,6 +37,7 @@
           placeholder="Пароль"
         />
         <button
+          ref="registerSubmit"
           type="submit"
           class="primary-btn"
           @click="emit('submit', { ...userAuth, type: 'register' })"
@@ -57,6 +59,8 @@
 </template>
 
 <script setup>
+import { ref, watch, onMounted } from "vue";
+
 const props = defineProps({
   formType: {
     type: String,
@@ -65,12 +69,58 @@ const props = defineProps({
   error: String,
 });
 
+const form = ref();
+const formsContainer = ref(null);
+const loginSubmit = ref(null);
+const registerSubmit = ref(null);
+
 const userAuth = ref({
   login: "",
   password: "",
 });
 
 const emit = defineEmits(["switch-form", "submit"]);
+
+let currentTransitionHandler = null;
+
+watch(
+  () => props.formType,
+  (newType) => {
+    if (!formsContainer.value) return;
+
+    if (currentTransitionHandler) {
+      formsContainer.value.removeEventListener(
+        "transitionend",
+        currentTransitionHandler
+      );
+      currentTransitionHandler = null;
+    }
+
+    const handleTransitionEnd = () => {
+      formsContainer.value.removeEventListener(
+        "transitionend",
+        handleTransitionEnd
+      );
+      currentTransitionHandler = null;
+      if (newType === "login") {
+        loginSubmit.value?.focus();
+      } else {
+        registerSubmit.value?.focus();
+      }
+    };
+
+    currentTransitionHandler = handleTransitionEnd;
+    formsContainer.value.addEventListener("transitionend", handleTransitionEnd);
+  }
+);
+
+onMounted(() => {
+  if (props.formType === "login") {
+    loginSubmit.value?.focus();
+  } else {
+    registerSubmit.value?.focus();
+  }
+});
 
 const switchForm = (type) => {
   emit("switch-form", type);
