@@ -4,4 +4,4 @@ pydantic
 pydantic-settings
 python-dotenv # For loading .env file locally (not used directly in container, but good practice)
 httpx # For async HTTP requests
-fpdf
+fpdf2

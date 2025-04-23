@@ -3,130 +3,322 @@ import os
 from fpdf import FPDF
 from typing import Dict, List, Any
 import datetime
+import re # Import regex for potential key matching
+import logging
 
-# --- Annotation [services/pdf_generator.py: 1] ---
-# Define constants for styling (optional but good practice)
-FONT_FAMILY = "DejaVu" # Use the font installed in Dockerfile
+# --- Constants ---
+FONT_FAMILY = "DejaVu"
 FONT_STYLE_NORMAL = ""
 FONT_STYLE_BOLD = "B"
-FONT_SIZE_TITLE = 16
+FONT_SIZE_NAME = 18
+FONT_SIZE_CONTACT = 10
 FONT_SIZE_HEADING = 12
+FONT_SIZE_SUBHEADING = 11
 FONT_SIZE_NORMAL = 10
-LINE_HEIGHT_MULTIPLIER = 1.5 # Adjust spacing between lines
+LINE_HEIGHT_MULTIPLIER = 1.4 # Slightly adjusted line height
 
-
+# --- Font Paths (Keep as is) ---
 DEJAVU_FONT_PATH_DIR = "/usr/share/fonts/truetype/dejavu/"
 DEJAVU_FONT_REGULAR = os.path.join(DEJAVU_FONT_PATH_DIR, 'DejaVuSans.ttf')
 DEJAVU_FONT_BOLD = os.path.join(DEJAVU_FONT_PATH_DIR, 'DejaVuSans-Bold.ttf')
 
+# --- Placeholder Texts ---
+PLACEHOLDER_TEXT = {
+    "name": "YOUR FULL NAME",
+    "contact": "Your Address | Your Phone | Your Email | Your LinkedIn/Portfolio (Optional)",
+    "summary": "Write a brief professional summary highlighting your key skills, experience, and career goals. Tailor this to the job you are applying for.",
+    "experience": "- **[Job Title]** at [Company Name] ([Start Date] - [End Date])\n  - [Responsibility or achievement 1]\n  - [Responsibility or achievement 2]\n  - [Add more relevant details or projects]",
+    "education": "- **[Degree Name]** - [Major/Field of Study]\n  [Institution Name], [City, State] ([Year Graduated])\n  - [Optional: Relevant coursework, honors, GPA if high]",
+    "soft_skills": "Communication, Teamwork, Problem-Solving, Adaptability, Time Management", # Example soft skills
+}
+
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 class PDFResumeGenerator:
 
     def __init__(self):
-        global FONT_FAMILY # Allow modification of FONT_FAMILY on fallback
+        global FONT_FAMILY
         self.pdf = FPDF('P', 'mm', 'A4')
 
-        # --- MODIFICATION START ---
-        # Check if the font files actually exist before trying to add them
+        # --- Font Loading Logic (Keep as is) ---
         font_regular_exists = os.path.exists(DEJAVU_FONT_REGULAR)
         font_bold_exists = os.path.exists(DEJAVU_FONT_BOLD)
 
         if font_regular_exists and font_bold_exists:
             try:
-                # Provide the full path to add_font
                 self.pdf.add_font(FONT_FAMILY, '', DEJAVU_FONT_REGULAR, uni=True)
                 self.pdf.add_font(FONT_FAMILY, FONT_STYLE_BOLD, DEJAVU_FONT_BOLD, uni=True)
-                print(f"Successfully loaded DejaVu fonts from {DEJAVU_FONT_PATH_DIR}") # Added log
+                log.info(f"Successfully loaded DejaVu fonts from {DEJAVU_FONT_PATH_DIR}") # Используем log.info
             except RuntimeError as e:
-                print(f"Error loading DejaVu font even though files exist: {e}. Falling back.")
-                FONT_FAMILY = "Arial" # Fallback
+                log.error(f"Error loading DejaVu font: {e}. Falling back.", exc_info=True) # Используем log.error с traceback
+                FONT_FAMILY = "Arial"
         else:
-            # Log which file is missing
-            if not font_regular_exists:
-                 print(f"Warning: Font file not found at {DEJAVU_FONT_REGULAR}")
-            if not font_bold_exists:
-                 print(f"Warning: Font file not found at {DEJAVU_FONT_BOLD}")
-            print("Falling back to default Arial font.")
-            print("Ensure 'fonts-dejavu-core' is installed correctly in the Docker image and the path is correct.")
-            FONT_FAMILY = "Arial" # Fallback
-        # --- MODIFICATION END ---
+            if not font_regular_exists: log.warning(f"Font file not found at {DEJAVU_FONT_REGULAR}") # log.warning
+            if not font_bold_exists: log.warning(f"Font file not found at {DEJAVU_FONT_BOLD}") # log.warning
+            log.warning("Falling back to default Arial font.")
+            FONT_FAMILY = "Arial"
+        # --- End Font Loading ---
 
         self.pdf.add_page()
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_NORMAL)
+        self.pdf.set_auto_page_break(auto=True, margin=15) # Нижний отступ для автопереноса
+        self.pdf.set_left_margin(15)
+        self.pdf.set_right_margin(15)
         self.line_height = FONT_SIZE_NORMAL * LINE_HEIGHT_MULTIPLIER
+        # Добавим отладочную информацию о размерах
+        log.debug(f"Page width: {self.pdf.w}mm, Left margin: {self.pdf.l_margin}mm, Right margin: {self.pdf.r_margin}mm")
+        log.debug(f"Effective page width (epw): {self.pdf.epw}mm")
+
+
+    def _set_font_normal(self):
+        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_NORMAL)
+
+    def _set_font_bold(self):
+        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_NORMAL)
 
     def _add_section_heading(self, title: str):
-        # --- Annotation [services/pdf_generator.py: 7] ---
-        # Helper method to add a styled section heading.
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_HEADING)
-        self.pdf.cell(0, self.line_height * 1.5, title, ln=1, align='L') # Add extra space before heading
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_NORMAL) # Reset font
-        self.pdf.ln(self.line_height / 2) # Add some space after heading
+        try:
+            log.debug(f"Adding section heading: '{title[:50]}...' at y={self.pdf.get_y()}")
+            self.pdf.ln(self.line_height * 0.7)
+            self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_HEADING)
+            # Проверим ширину заголовка перед отрисовкой
+            title_width = self.pdf.get_string_width(title.upper())
+            available_width = self.pdf.epw # Effective Page Width
+            log.debug(f"Section heading width: {title_width:.2f}mm, Available width: {available_width:.2f}mm")
+            if title_width > available_width:
+                 log.warning(f"Section heading '{title.upper()}' might be too wide!")
+            self.pdf.cell(0, self.line_height * 1.2, title.upper(), border='B', ln=1, align='L')
+            self.pdf.ln(self.line_height * 0.5)
+            self._set_font_normal()
+        except Exception as e:
+            log.error(f"Error adding section heading '{title}': {e}", exc_info=True)
+            raise # Перевыбрасываем исключение, чтобы остановить генерацию
 
-    def _add_qa(self, question: str, answer: str):
-        # --- Annotation [services/pdf_generator.py: 8] ---
-        # Helper method to add a Question-Answer pair.
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_NORMAL)
-        self.pdf.multi_cell(0, self.line_height, f"Q: {question}", ln=1)
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_NORMAL)
-        self.pdf.multi_cell(0, self.line_height, f"A: {answer}", ln=1)
-        self.pdf.ln(self.line_height / 2) # Add space after Q/A pair
+    def _add_text_block(self, text: str):
+        try:
+            log.debug(f"Adding text block: '{text[:100]}...' at y={self.pdf.get_y()}, x={self.pdf.get_x()}")
+            available_width = self.pdf.w - self.pdf.r_margin - self.pdf.get_x()
+            log.debug(f"Available width for multi_cell: {available_width:.2f}mm")
+            # Проверим самое длинное слово на всякий случай
+            longest_word = max(re.split(r'\s+', text), key=len) if text else ""
+            if longest_word:
+                word_width = self.pdf.get_string_width(longest_word)
+                log.debug(f"Longest word ('{longest_word[:30]}...') width: {word_width:.2f}mm")
+                if word_width > self.pdf.epw:
+                    log.warning(f"Potentially problematic long word found! Width {word_width:.2f}mm > Effective Page Width {self.pdf.epw:.2f}mm")
+
+            self.pdf.multi_cell(0, self.line_height, text)
+            self.pdf.ln(self.line_height * 0.3)
+        except Exception as e:
+            # Если ошибка именно здесь, логируем текст
+            log.error(f"Error adding text block: {e}. Text was: '{text}'", exc_info=True)
+            raise
 
     def _add_list_items(self, items: List[str]):
-        # --- Annotation [services/pdf_generator.py: 9] ---
-        # Helper method to add items as a bulleted list.
         if not items:
-            self.pdf.multi_cell(0, self.line_height, "N/A", ln=1)
+            self._add_text_block("N/A")
             return
-        for item in items:
-            # Use a simple dash as bullet point
-            self.pdf.multi_cell(0, self.line_height, f"- {item}", ln=1)
-        self.pdf.ln(self.line_height / 2) # Add space after the list
+        for i, item in enumerate(items):
+            try:
+                log.debug(f"Adding list item {i+1}: '{item[:100]}...' at y={self.pdf.get_y()}, x={self.pdf.get_x()}")
+                text_to_render = f"• {item}"
+
+                # Рассчитываем доступную ширину явно
+                available_width = self.pdf.epw # epw = w - l_margin - r_margin
+                log.debug(f"Using explicit width for multi_cell: {available_width:.2f}mm for item '{item}'")
+
+                if available_width <= 0:
+                    log.error(f"CRITICAL: Calculated available width ({available_width:.2f}mm) is not positive before rendering '{item}'!")
+                    raise ValueError(f"Invalid available width calculated: {available_width}")
+
+                # Используем рассчитанную ширину
+                self.pdf.multi_cell(available_width, self.line_height, text_to_render)
+
+                # Опционально: добавить небольшой отступ после каждого элемента списка
+                # self.pdf.ln(self.line_height * 0.1)
+
+            except Exception as e:
+                 log.error(f"Error adding list item: {e}. Item was: '{item}'", exc_info=True)
+                 raise
+        # Этот ln() теперь либо не нужен, либо управляет отступом ПОСЛЕ всего списка
+        self.pdf.ln(self.line_height * 0.3)
+
+
+    def _find_answer(self, user_answers: Dict[str, str], keywords: List[str]) -> str | None:
+        """
+        Ищет в словаре user_answers вопрос (ключ), содержащий любое из
+        переданных ключевых слов (без учета регистра).
+
+        Args:
+            user_answers: Словарь пар вопрос-ответ.
+            keywords: Список строк для поиска в вопросах (ключах).
+
+        Returns:
+            Строку ответа, соответствующую первому найденному вопросу,
+            или None, если ни один вопрос не соответствует ни одному ключевому слову.
+        """
+        if not user_answers or not keywords:
+            log.debug("_find_answer: Получены пустые ответы или ключевые слова.")
+            return None # Обработка крайних случаев
+
+        log.debug(f"Поиск ответа по ключевым словам: {keywords}")
+
+        # Перебираем каждый вопрос и ответ в словаре
+        for question, answer in user_answers.items():
+            # Приводим вопрос к нижнему регистру для сравнения без учета регистра
+            question_lower = question.lower()
+
+            # Проверяем, содержит ли вопрос в нижнем регистре
+            # хотя бы одно из ключевых слов (тоже в нижнем регистре)
+            for keyword in keywords:
+                keyword_lower = keyword.lower()
+                # Используем 'in' для проверки наличия подстроки.
+                # Это позволяет находить "name" в "What is your full name?"
+                if keyword_lower in question_lower:
+                    log.debug(f"Найдено совпадение: ключ '{keyword}' в вопросе '{question}'. Возвращаем ответ.")
+                    # Если найдено совпадение, возвращаем соответствующий ответ
+                    return answer
+
+        # Если цикл завершился, и мы ничего не вернули, значит совпадений не было
+        log.debug(f"Не найдено ни одного вопроса, соответствующего ключевым словам: {keywords}")
+        return None
 
     def generate(self, user_answers: Dict[str, str], generated_skills: List[str]) -> bytes:
-        # --- Annotation [services/pdf_generator.py: 10] ---
-        # Main method to orchestrate the PDF creation.
-        # Takes user answers and the processed skills list as input.
+        """
+        Generates a more complete-looking resume PDF. (Includes debug logging)
+        """
+        try:
+            log.info("Starting PDF generation...")
+            # --- 1. Header: Name and Contact Info ---
+            name = self._find_answer(user_answers, ["name", "full name"]) or PLACEHOLDER_TEXT["name"]
+            contact = self._find_answer(user_answers, ["contact", "email", "phone", "address", "linkedin"]) or PLACEHOLDER_TEXT["contact"]
 
-        # --- Title ---
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_TITLE)
-        self.pdf.cell(0, self.line_height * 2, "Resume Summary", ln=1, align='C')
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_NORMAL)
-        self.pdf.ln(self.line_height)
+            log.debug(f"Adding Name: '{name[:50]}...'")
+            self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_NAME)
+            self.pdf.cell(0, self.line_height * 1.5, name, ln=1, align='C')
 
-        # --- Generated Skills Section ---
-        # --- Annotation [services/pdf_generator.py: 11] ---
-        # Add the most important output: the generated skills.
-        self._add_section_heading("Generated Hard Skills")
-        self._add_list_items(generated_skills)
+            log.debug(f"Adding Contact: '{contact[:100]}...'")
+            self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_CONTACT)
+            self.pdf.cell(0, self.line_height * 0.8, contact, ln=1, align='C')
+            self.pdf.ln(self.line_height)
 
-        # --- Raw Answers Section ---
-        # --- Annotation [services/pdf_generator.py: 12] ---
-        # Optionally include the raw answers provided by the user for context.
-        self._add_section_heading("User Provided Answers")
-        if user_answers:
-            for question, answer in user_answers.items():
-                self._add_qa(question, answer)
-        else:
-            self.pdf.multi_cell(0, self.line_height, "No answers provided.", ln=1)
+            # --- 2. Summary/Objective ---
+            self._add_section_heading("Summary")
+            summary_text = self._find_answer(user_answers, ["summary", "objective", "profile", "about yourself"]) or PLACEHOLDER_TEXT["summary"]
+            self._set_font_normal()
+            self._add_text_block(summary_text)
 
-        # --- Footer (Optional) ---
-        # You could add generation date, etc. here
-        self.pdf.set_y(-15) # Position 15 mm from bottom
-        self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, 8)
-        self.pdf.cell(0, 10, f"Generated on: {datetime.date.today().strftime('%Y-%m-%d')}", 0, 0, 'C')
+            # --- 3. Work Experience ---
+            self._add_section_heading("Experience")
+            experience_found = False
+            # ... (логика поиска опыта) ...
+            for q, a in user_answers.items():
+                if re.search(r'\b(experience|role|job|project|worked on|responsibilit(y|ies))\b', q, re.IGNORECASE) and \
+                   not re.search(r'\b(summary|objective|profile|about yourself|skill|education|degree)\b', q, re.IGNORECASE):
+                    log.debug(f"Adding experience block for question: '{q[:50]}...'")
+                    self._set_font_bold()
+                    q_cleaned = q.replace("Describe your ", "").replace("Tell me about ","").replace("?","")
+                    # Используем multi_cell для заголовка вопроса, т.к. он может быть длинным
+                    self._add_text_block(f"Regarding: {q_cleaned}") # Заменили cell на text_block
+                    self._set_font_normal()
+                    self._add_text_block(f"- {a}") # Используем text_block для ответа
+                    experience_found = True
 
-        # --- Annotation [services/pdf_generator.py: 13] ---
-        # Output the PDF content as bytes.
-        # FPDF.output() with no 'name' argument returns bytes directly.
-        return self.pdf.output()
+            if not experience_found:
+                log.debug("No specific experience found, adding placeholder.")
+                self._set_font_normal()
+                self._add_text_block(PLACEHOLDER_TEXT["experience"])
 
-# --- Annotation [services/pdf_generator.py: 14] ---
-# Define a function to be easily called from the router.
-# This creates an instance of the generator and calls its generate method.
+            # --- 4. Education ---
+            self._add_section_heading("Education")
+            education_text = self._find_answer(user_answers, ["education", "degree", "university", "college", "studied"])
+            self._set_font_normal()
+            if education_text:
+                 log.debug(f"Adding education block: '{education_text[:100]}...'")
+                 self._add_text_block(f"- {education_text}")
+            else:
+                 log.debug("No specific education found, adding placeholder.")
+                 self._add_text_block(PLACEHOLDER_TEXT["education"])
+
+
+            # --- 5. Skills ---
+            self._add_section_heading("Skills")
+
+            if generated_skills:
+                 log.debug("Adding generated hard skills.")
+                 self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_SUBHEADING)
+                 # Используем multi_cell для заголовка подраздела на всякий случай
+                 self.pdf.multi_cell(0, self.line_height * 1.1, "Technical / Hard Skills:")
+                 self.pdf.ln(self.line_height * 0.1) # Небольшой отступ после заголовка подраздела
+                 self._set_font_normal()
+                 self._add_list_items(generated_skills)
+            else:
+                 log.debug("No generated skills, adding placeholder.")
+                 self._set_font_normal()
+                 self._add_text_block("[List relevant technical skills here, e.g., Programming Languages, Software, Tools]")
+
+            self.pdf.ln(self.line_height * 0.2)
+
+            soft_skills_text = self._find_answer(user_answers, ["soft skill", "interpersonal", "communication", "teamwork"])
+            log.debug("Adding soft skills section.")
+            self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_SUBHEADING)
+             # Используем multi_cell для заголовка подраздела
+            self.pdf.multi_cell(0, self.line_height * 1.1, "Soft Skills:")
+            self.pdf.ln(self.line_height * 0.1)
+            self._set_font_normal()
+            if soft_skills_text:
+                log.debug(f"Adding found soft skills: '{soft_skills_text[:100]}...'")
+                self._add_text_block(soft_skills_text)
+            else:
+                log.debug("No specific soft skills found, adding placeholder.")
+                self._add_text_block(PLACEHOLDER_TEXT["soft_skills"])
+
+            # --- Output ---
+            log.info("PDF generation complete, preparing output.")
+            pdf_output_data = self.pdf.output()
+            log.debug(f"Type returned by self.pdf.output(): {type(pdf_output_data)}") # Добавим лог типа
+
+            pdf_bytes_final: bytes # Объявим тип для ясности
+
+            if isinstance(pdf_output_data, bytearray):
+                # Если вернулся bytearray, преобразуем его в bytes
+                log.warning("FPDF output() returned bytearray. Converting to bytes.")
+                pdf_bytes_final = bytes(pdf_output_data)
+            elif isinstance(pdf_output_data, bytes):
+                # Если вернулся ожидаемый bytes, просто используем его
+                pdf_bytes_final = pdf_output_data
+            elif isinstance(pdf_output_data, str):
+                # Обработка строки (менее вероятно с fpdf2, но оставим на всякий случай)
+                log.critical(f"FPDF output() returned str, expected bytes or bytearray!")
+                try:
+                    log.warning("Attempting to encode problematic string output using latin-1 (may break non-latin chars)...")
+                    pdf_bytes_final = pdf_output_data.encode('latin-1')
+                except Exception as e:
+                     log.error(f"Failed to encode string output from FPDF: {e}", exc_info=True)
+                     raise TypeError(f"FPDF output was str, expected bytes/bytearray, and encoding failed.")
+            else:
+                # Если вернулся какой-то совершенно другой тип
+                error_msg = f"FPDF output returned unexpected type: {type(pdf_output_data)}. Expected bytes or bytearray."
+                log.error(error_msg)
+                raise TypeError(error_msg)
+
+            # Теперь pdf_bytes_final гарантированно имеет тип bytes
+            log.info(f"PDF generated successfully (type: {type(pdf_bytes_final)}), size: {len(pdf_bytes_final)} bytes.")
+            return pdf_bytes_final
+
+        except Exception as e:
+             # Логируем любую ошибку во время генерации PDF
+             log.error(f"Failed to generate PDF: {e}", exc_info=True)
+             # Перевыбрасываем ошибку, чтобы внешний обработчик вернул 500
+             raise
+
+
+# --- Function to call from router (обновленная) ---
 def create_resume_pdf(user_answers: Dict[str, str], generated_skills: List[str]) -> bytes:
     """
-    Creates a resume summary PDF from user answers and generated skills.
+    Creates a standard-looking resume PDF using user answers and generated skills.
+    Includes detailed logging for debugging generation issues.
 
     Args:
         user_answers: Dictionary of question-answer pairs.
@@ -134,7 +326,30 @@ def create_resume_pdf(user_answers: Dict[str, str], generated_skills: List[str])
 
     Returns:
         bytes: The generated PDF content.
+
+    Raises:
+        Exception: Any exception during PDF generation will be propagated.
+                   TypeError if the generator returns an unexpected type.
     """
-    generator = PDFResumeGenerator()
-    pdf_bytes = generator.generate(user_answers, generated_skills)
-    return pdf_bytes
+    log.info("Received request to create PDF resume.") # Используем логгер
+    try:
+        generator = PDFResumeGenerator()
+        pdf_content = generator.generate(user_answers, generated_skills)
+
+        # Строгая проверка типа остается важной
+        log.debug(f"Type returned by generator.generate(): {type(pdf_content)}")
+
+        if not isinstance(pdf_content, bytes):
+            error_msg = f"CRITICAL Error: PDF generator was expected to return bytes, but returned {type(pdf_content)}."
+            log.error(error_msg)
+            raise TypeError(error_msg) # Важно остановить процесс здесь
+
+        log.info("PDF content generated and validated (type: bytes).")
+        return pdf_content
+
+    except Exception as e:
+         # Логируем ошибку на верхнем уровне и позволяем фреймворку вернуть 500
+         # Ошибка уже должна быть залогирована внутри generate() с большим контекстом
+         log.error(f"Error in create_resume_pdf function: {e}", exc_info=True)
+         # Перевыбрасываем, чтобы FastAPI/Starlette обработал и вернул 500
+         raise # Не возвращайте здесь пустые байты или что-то еще!
