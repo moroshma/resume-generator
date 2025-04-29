@@ -52,3 +52,8 @@ class UpdatedSkillsResponse(BaseModel):
      # --- Annotation [schemas/resume.py: 12] ---
      # The full text of the updated hard skills section (string).
      updated_hard_skills: str = Field(..., description="The updated hard skills text.")
+
+
+class ResumePdfRequest(BaseModel):
+    answers: Dict[str, str] = Field(..., description="Словарь ответов пользователя (вопрос: ответ)")
+    generated_skills: List[str] = Field(..., description="Список строковых представлений hard skills")
