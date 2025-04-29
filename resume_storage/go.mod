@@ -8,7 +8,7 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/minio/minio-go/v7 v7.0.89
-	github.com/moroshma/resume-generator/user_service v0.0.0-20250411224735-e034ccd1c4bb
+	github.com/moroshma/resume-generator/user_service v0.0.0-20250429212821-f52eb72bcb63
 	github.com/sirupsen/logrus v1.9.3
 )
 
