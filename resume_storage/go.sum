@@ -47,6 +47,8 @@ github.com/minio/minio-go/v7 v7.0.89 h1:hx4xV5wwTUfyv8LarhJAwNecnXpoTsj9v3f3q/Zk
 github.com/minio/minio-go/v7 v7.0.89/go.mod h1:2rFnGAp02p7Dddo1Fq4S2wYOfpF0MUTSeLTRC90I204=
 github.com/moroshma/resume-generator/user_service v0.0.0-20250411224735-e034ccd1c4bb h1:/wb3r6cD0QrN58l12CmojnRZI5egV9LmG3hBcQw+5aM=
 github.com/moroshma/resume-generator/user_service v0.0.0-20250411224735-e034ccd1c4bb/go.mod h1:rsbwW7D8G4rPPHDlkF9x6N7/0n8M+QtScjPRhCBmqh8=
+github.com/moroshma/resume-generator/user_service v0.0.0-20250429212821-f52eb72bcb63 h1:KNfVw7ZSxnDDAEMMz01GKNH1ndSGjSrOUaVqOTv8y9w=
+github.com/moroshma/resume-generator/user_service v0.0.0-20250429212821-f52eb72bcb63/go.mod h1:rsbwW7D8G4rPPHDlkF9x6N7/0n8M+QtScjPRhCBmqh8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=

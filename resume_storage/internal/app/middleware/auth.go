@@ -3,6 +3,8 @@ package middleware
 import (
 	"log/slog"
 	"net/http"
+
+	auth_utils "github.com/moroshma/resume-generator/user_service/pkg/utils"
 )
 
 var client = http.Client{}
@@ -63,18 +65,10 @@ func AuthMiddleware(authHost string) func(http.Handler) http.Handler {
 			if refreshToken.Value != "" && respAccessCookie != "" {
 				slog.Any("set new respRefreshCookie", respRefreshCookie)
 				slog.Any("set new respAccessCookie", respAccessCookie)
-				http.SetCookie(w, &http.Cookie{
-					Name:     "Refresh-Token",
-					Value:    respRefreshCookie,
-					Path:     "/",
-					HttpOnly: true,
-				})
-				http.SetCookie(w, &http.Cookie{
-					Name:     "Authorization",
-					Value:    respAccessCookie,
-					Path:     "/",
-					HttpOnly: true,
-				})
+
+				auth_utils.SetAccessTokenRequestCookie(req, respAccessCookie)
+				auth_utils.SetRefreshTokenCookie(w, respRefreshCookie)
+				auth_utils.SetAccessTokenCookie(w, respAccessCookie)
 			}
 
 			next.ServeHTTP(w, r)
