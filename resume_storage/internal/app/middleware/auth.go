@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log/slog"
 	"net/http"
 )
 
@@ -11,21 +12,22 @@ func AuthMiddleware(authHost string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			refreshToken, err := r.Cookie("Refresh-Token")
 			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				http.Error(w, "[AuthMiddleware] Unauthorized Cant find Refresh-Token", http.StatusUnauthorized)
 				return
 			}
 
 			authCookie, err := r.Cookie("Authorization")
 			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				http.Error(w, "[AuthMiddleware] Unauthorized Cant find Authorization", http.StatusUnauthorized)
 				return
 			}
 
 			req, err := http.NewRequest("GET", authHost+"/api/v001/auth/check", nil)
 			if err != nil {
-				http.Error(w, "Server Error", http.StatusInternalServerError)
+				http.Error(w, "Server Error err:"+err.Error(), http.StatusInternalServerError)
 				return
 			}
+
 			req.AddCookie(&http.Cookie{
 				Name:  "Refresh-Token",
 				Value: refreshToken.Value,
@@ -37,7 +39,7 @@ func AuthMiddleware(authHost string) func(http.Handler) http.Handler {
 
 			resp, err := client.Do(req)
 			if err != nil {
-				http.Error(w, "Authentication Service Unavailable", http.StatusServiceUnavailable)
+				http.Error(w, "Authentication Service Unavailable"+err.Error(), http.StatusServiceUnavailable)
 				return
 			}
 			defer resp.Body.Close()
@@ -58,7 +60,9 @@ func AuthMiddleware(authHost string) func(http.Handler) http.Handler {
 				}
 			}
 
-			if refreshToken.Value != respRefreshCookie && respAccessCookie != "" {
+			if refreshToken.Value != "" && respAccessCookie != "" {
+				slog.Any("set new respRefreshCookie", respRefreshCookie)
+				slog.Any("set new respAccessCookie", respAccessCookie)
 				http.SetCookie(w, &http.Cookie{
 					Name:     "Refresh-Token",
 					Value:    respRefreshCookie,

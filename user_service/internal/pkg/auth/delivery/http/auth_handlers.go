@@ -3,7 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
-	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/utils"
+	"github.com/moroshma/resume-generator/user_service/pkg/utils"
 
 	"github.com/moroshma/resume-generator/user_service/internal/app/helper"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/user/repository/tarantool"

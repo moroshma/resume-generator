@@ -5,8 +5,8 @@ import (
 	"errors"
 	"github.com/moroshma/resume-generator/user_service/internal/app/helper"
 	"github.com/moroshma/resume-generator/user_service/internal/app/middleware"
-	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/utils"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/user/repository/tarantool"
+	"github.com/moroshma/resume-generator/user_service/pkg/utils"
 	"net/http"
 	"strings"
 

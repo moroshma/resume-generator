@@ -3,8 +3,8 @@ package middleware
 import (
 	"errors"
 	"fmt"
-	"github.com/moroshma/resume-generator/user_service/internal/pkg/auth/utils"
 	"github.com/moroshma/resume-generator/user_service/internal/pkg/models"
+	"github.com/moroshma/resume-generator/user_service/pkg/utils"
 	"log/slog"
 	"net/http"
 
