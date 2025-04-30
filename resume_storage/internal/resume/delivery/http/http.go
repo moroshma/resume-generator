@@ -68,6 +68,9 @@ func (h *ResumeHandler) CreateResume(w http.ResponseWriter, r *http.Request) {
 	}
 	defer src.Close()
 
+	logrus.Infof("Получен файл: %s, размер: %d, content-type: %s",
+		hdr.Filename, hdr.Size, hdr.Header.Get("Content-Type"))
+
 	fileData, err := io.ReadAll(src)
 	if err != nil {
 		http.Error(w, "Ошибка чтения файла: "+err.Error(), http.StatusInternalServerError)
