@@ -1,6 +1,7 @@
 package resume_handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
@@ -67,8 +68,14 @@ func (h *ResumeHandler) CreateResume(w http.ResponseWriter, r *http.Request) {
 	}
 	defer src.Close()
 
+	fileData, err := io.ReadAll(src)
+	if err != nil {
+		http.Error(w, "Ошибка чтения файла: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	resume := models.Resume{
-		Payload:     src,
+		Payload:     bytes.NewReader(fileData),
 		PayloadName: hdr.Filename,
 		PayloadSize: hdr.Size,
 	}
