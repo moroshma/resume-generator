@@ -1,20 +1,14 @@
 <template>
   <div class="container">
     <ProgressBar
+      v-if="stepNumber < 3"
       :totalSteps="3"
       :answered-questions="answeredCount"
       :total-questions="totalQuestions"
       :current-step="stepNumber"
       alignment="left"
     />
-    <component
-      :draft="{
-        questions,
-        answers,
-        labels,
-      }"
-      :is="step.component.value"
-    ></component>
+    <component :draft="draft" :is="step.component.value"></component>
 
     <ButtonsPrimaryButton
       text="Продолжить"
@@ -39,7 +33,19 @@ const {
   step,
   nextStep,
   stepNumber,
+  allAnswers,
+  pdfUrl,
+  pdfBlob,
 } = useDraft();
+
+const draft = reactive({
+  questions,
+  answers,
+  labels,
+  allAnswers,
+  pdfUrl,
+  pdfBlob,
+});
 
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {

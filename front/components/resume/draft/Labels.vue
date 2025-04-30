@@ -1,29 +1,43 @@
 <template>
   <div class="labels-container">
-    <div class="labels-list">
-      <div v-for="(label, index) in labels" :key="index" class="label-item">
-        <h3 class="label-title">{{ label.title }}</h3>
-        <EditableField
-          v-model="label.answer"
-          class="label-answer"
-          placeholder="Введите ваш ответ"
+    <div class="labels_editor">
+      <div class="labels-list">
+        <div
+          v-for="(label, index) in props.draft.labels"
+          :key="index"
+          class="label-item"
+        >
+          <h3 class="label-title">{{ label.label }}</h3>
+          <EditableField
+            v-model="label.value"
+            class="label-answer"
+            placeholder="Введите ваш ответ"
+          />
+        </div>
+      </div>
+
+      <div class="feedback-section">
+        <textarea
+          v-model="feedback"
+          class="feedback-input"
+          placeholder="Опишите, что нужно изменить или улучшить в сгенерированных лейблах..."
+        />
+      </div>
+
+      <div class="actions" v-if="feedback.trim()">
+        <ButtonsPrimaryButton
+          :loading="isRegenerating"
+          text="Перегенерировать лейблы"
+          @click="handleRegenerate"
         />
       </div>
     </div>
-
-    <div class="feedback-section">
-      <textarea
-        v-model="feedback"
-        class="feedback-input"
-        placeholder="Опишите, что нужно изменить или улучшить в сгенерированных лейблах..."
-      />
-    </div>
-
-    <div class="actions" v-if="feedback.trim()">
-      <ButtonsPrimaryButton
-        :loading="isRegenerating"
-        text="Перегенерировать лейблы"
-        @click="handleRegenerate"
+    <div class="pdf">
+      <ResumeDraftPdfPreview
+        :isLoading="false"
+        :error="error"
+        :pdfUrl="props.draft.pdfUrl"
+        @save="save"
       />
     </div>
   </div>
@@ -34,24 +48,21 @@ interface Label {
   title: string;
   answer: string;
 }
+const props = defineProps(["draft"]);
 
-const initialLabels: Label[] = [
-  {
-    title: "Профессиональный опыт",
-    answer: "5 лет работы fullstack разработчиком",
-  },
-  {
-    title: "Ключевые навыки",
-    answer: "JavaScript, TypeScript, Node.js, Vue, React",
-  },
-  { title: "Образование", answer: "Бакалавр компьютерных наук, МГУ" },
-  {
-    title: "Достижения",
-    answer: "Оптимизировал производительность приложения на 40%",
-  },
-];
+async function save() {
+  const data = new FormData();
+  data.append("resume", props.draft.pdfBlob);
+  const res = await $fetch("/api/resume/pdf/create", {
+    method: "POST",
+    body: data,
+  });
+  console.log(res, "res");
+}
 
-const labels: Ref<Label[]> = ref([...initialLabels]);
+console.log(props.draft.pdfUrl, "pdfUrl");
+
+const labels: Ref<Label[]> = ref([]);
 const feedback = ref("");
 const isRegenerating = ref(false);
 
@@ -75,8 +86,9 @@ const handleRegenerate = async () => {
 
 <style scoped>
 .labels-container {
-  max-width: 800px;
-  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 1rem;
 }
 

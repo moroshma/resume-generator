@@ -11,6 +11,20 @@ export const useDraft = () => {
     },
   ];
 
+  const AnswersByStep = ref<Record<number, Record<string, string>>>({
+    1: {},
+    2: {},
+    3: {},
+  });
+
+  const allAnswers = ref({});
+
+  const stepQuestions = reactive<Record<number, any[]>>({
+    1: [],
+    2: [],
+    3: [],
+  });
+
   const {
     initBasicQuestions,
     generateLabels,
@@ -29,39 +43,90 @@ export const useDraft = () => {
   });
 
   const answeredCount = computed(() => {
-    const allAnswers = Object.values(answers);
+    console.log(answers.value, "answers.value");
 
-    if (stepNumber.value === 1) {
-      return questions.value
-        .filter((q: any) => q.type === "base")
-        .reduce((count: any, question: any) => {
-          return count + (answers[question.id]?.trim() ? 1 : 0);
-        }, 0);
-    }
+    return Object.values(answers.value).length;
+  });
 
-    return questions.value
-      .filter((q: any) => q.type === "additionally")
-      .reduce((count: any, question: any) => {
-        return count + (answers[question.id]?.trim() ? 1 : 0);
-      }, 0);
+  watch(stepNumber, (newVal, oldVal) => {
+    // Сохраняем ответы предыдущего шага
+    AnswersByStep.value[oldVal] = { ...answers.value };
+    allAnswers.value = { ...answers.value };
+    stepQuestions[oldVal] = [...questions.value];
+    // Восстанавливаем вопросы и ответы для нового шага
+    questions.value = stepQuestions[newVal];
+    Object.assign(answers.value, AnswersByStep.value[newVal]);
+
+    answers.value = {};
   });
 
   function nextStep() {
+    console.log(stepNumber.value, "stepNumber.value");
+
     if (stepNumber.value === 1) {
       // проверить выполнение всех вопросов
       getNextQuestions();
     } else if (stepNumber.value === 2) {
       generateLabels();
+      generatePdf();
     } else if (stepNumber.value === 3) {
-      //генерация резюме
+      console.log(generatePdf, "generatePdf");
     }
 
     stepNumber.value = stepNumber.value + 1;
   }
 
+  const pdfBlob = ref<Blob | null>(null);
+  const pdfUrl = computed(() =>
+    pdfBlob.value ? URL.createObjectURL(pdfBlob.value) : null
+  );
+
+  const generatePdf = async () => {
+    try {
+      isLoading.value = true;
+      const response: any = await $fetch("/api/resume/pdf/generate", {
+        method: "POST",
+        responseType: "blob", // Указываем тип ответа как blob
+        body: {
+          answers: allAnswers.value,
+          generated_skills: [
+            "Python",
+            "Django",
+            "Flask",
+            "FastAPI",
+            "JavaScript",
+            "React",
+            "Node.js",
+            "HTML5",
+            "CSS3",
+            "SQL",
+            "PostgreSQL",
+            "MySQL",
+            "MongoDB",
+            "RESTful APIs",
+            "GraphQL",
+            "Docker",
+            "Kubernetes",
+            "AWS",
+            "Git",
+            "CI/CD",
+            "Agile/Scrum",
+            "Unit Testing",
+            "Integration Testing",
+          ],
+        },
+      });
+
+      pdfBlob.value = new Blob([response], { type: "application/pdf" });
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   return {
+    pdfBlob,
+    pdfUrl,
     initBasicQuestions,
-    generateLabels,
     questions,
     getNextQuestions,
     isLoading,
@@ -72,5 +137,6 @@ export const useDraft = () => {
     step,
     nextStep,
     stepNumber,
+    allAnswers,
   };
 };
