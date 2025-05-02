@@ -14,6 +14,10 @@ export default defineNuxtConfig({
       process.env.BASE_HOST || process.env.NODE_ENV === "production"
         ? "http://traefik:80"
         : "http://localhost:80",
+    NUXT_HOST:
+      process.env.NODE_ENV === "production"
+        ? "http://traefik:80"
+        : "http://localhost:3000",
     public: {},
   },
   app: {
@@ -26,5 +30,9 @@ export default defineNuxtConfig({
       charset: "utf-16",
       viewport: "width=device-width, initial-scale=1, maximum-scale=1",
     },
+  },
+  routeRules: {
+    "/auth": { ssr: false },
+    "/home": { ssr: false },
   },
 });
