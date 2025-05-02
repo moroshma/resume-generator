@@ -10,13 +10,13 @@
     <div class="content">
       <div class="header">
         <h3 class="title">{{ resume.title }}</h3>
-        <div class="progress" :style="{ '--progress': resume.progress + '%' }">
-          <span>{{ resume.progress }}%</span>
+        <div class="progress" :style="{ '--progress': '100%' }">
+          <span>100%</span>
         </div>
       </div>
 
       <div class="meta">
-        <div class="date">{{ resume.date }}</div>
+        <div class="date">{{ resume.created_at }}</div>
       </div>
 
       <div class="actions">
@@ -57,24 +57,22 @@
   </div>
 </template>
 
-<script setup>
-import { computed, ref } from "vue";
-
-const props = defineProps({
-  resume: {
-    type: Object,
-    required: true,
-  },
-});
+<script setup lang="ts">
+const props = defineProps<{
+  resume: IResumePreview;
+}>();
 
 const isHovered = ref(false);
-
+//d1242d
+//17837b
 const cardStyle = computed(() => ({
-  "--card-color": props.resume.color,
+  "--card-color": "#d1242d",
   transform: isHovered.value
     ? "rotate3d(0.5, -0.3, 0, 8deg)"
     : "rotate3d(0, 0, 0, 0deg)",
 }));
+
+function handleDelete() {}
 </script>
 
 <style scoped>
