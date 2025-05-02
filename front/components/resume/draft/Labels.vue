@@ -35,7 +35,8 @@
     <div class="pdf">
       <ResumeDraftPdfPreview
         :isLoading="false"
-        :error="error"
+        :error="null"
+        :isSaving="false"
         :pdfUrl="props.draft.pdfUrl"
         @save="save"
       />
@@ -52,15 +53,13 @@ const props = defineProps(["draft"]);
 
 async function save() {
   const data = new FormData();
-  data.append("resume", props.draft.pdfBlob);
-  const res = await $fetch("/api/resume/pdf/create", {
+  data.append("resume", props.draft.pdfBlob, "naming2.pdf");
+
+  const res = await $fetch("api/resume/pdf/create", {
     method: "POST",
     body: data,
   });
-  console.log(res, "res");
 }
-
-console.log(props.draft.pdfUrl, "pdfUrl");
 
 const labels: Ref<Label[]> = ref([]);
 const feedback = ref("");
@@ -72,10 +71,6 @@ const handleRegenerate = async () => {
     // Здесь будет вызов API для перегенерации
 
     // Тестовая перегенерация
-    labels.value = initialLabels.map((label) => ({
-      ...label,
-      answer: `${label.answer} (обновлено)`,
-    }));
 
     feedback.value = "";
   } finally {
