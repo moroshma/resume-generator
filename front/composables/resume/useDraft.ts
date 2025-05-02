@@ -43,8 +43,6 @@ export const useDraft = () => {
   });
 
   const answeredCount = computed(() => {
-    console.log(answers.value, "answers.value");
-
     return Object.values(answers.value).length;
   });
 
@@ -61,16 +59,12 @@ export const useDraft = () => {
   });
 
   function nextStep() {
-    console.log(stepNumber.value, "stepNumber.value");
-
     if (stepNumber.value === 1) {
       // проверить выполнение всех вопросов
       getNextQuestions();
     } else if (stepNumber.value === 2) {
       generateLabels();
       generatePdf();
-    } else if (stepNumber.value === 3) {
-      console.log(generatePdf, "generatePdf");
     }
 
     stepNumber.value = stepNumber.value + 1;
@@ -84,7 +78,7 @@ export const useDraft = () => {
   const generatePdf = async () => {
     try {
       isLoading.value = true;
-      const response: any = await $fetch("/api/resume/pdf/generate", {
+      const response: Blob = await $fetch("/api/resume/pdf/generate", {
         method: "POST",
         responseType: "blob", // Указываем тип ответа как blob
         body: {
@@ -116,8 +110,10 @@ export const useDraft = () => {
           ],
         },
       });
-
-      pdfBlob.value = new Blob([response], { type: "application/pdf" });
+      pdfBlob.value = response;
+      // pdfBlob.value = new File([response], "VIBE.pdf", {
+      //   type: response.type,
+      // });
     } finally {
       isLoading.value = false;
     }
