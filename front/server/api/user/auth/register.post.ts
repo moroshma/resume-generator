@@ -16,7 +16,6 @@ export default defineEventHandler(async (event) => {
         }),
       }
     );
-    console.log({ ...response }, "response from register");
 
     return response;
   } catch (error) {
