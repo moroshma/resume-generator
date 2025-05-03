@@ -68,7 +68,7 @@ const isHovered = ref(false);
 //d1242d
 //17837b
 const cardStyle = computed(() => ({
-  "--card-color": "#d1242d",
+  "--card-color": props.resume.resume_id % 2 == 0 ? "#d1242d" : "#17837b",
   transform: isHovered.value
     ? "rotate3d(0.5, -0.3, 0, 8deg)"
     : "rotate3d(0, 0, 0, 0deg)",
