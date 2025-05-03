@@ -1,10 +1,6 @@
-import { defineEventHandler, readBody, createError } from "h3";
-import { $fetch } from "ofetch";
+import { defineEventHandler } from "h3";
 
 export default defineEventHandler(async (event) => {
-  const runtimeConfig = useRuntimeConfig();
-  const BASE_HOST = runtimeConfig.BASE_HOST;
-
   const body = await readRawBody(event, false);
 
   const clientHeaders = event.node.req.headers;
