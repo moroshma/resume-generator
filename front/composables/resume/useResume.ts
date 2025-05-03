@@ -1,9 +1,12 @@
 export const useResume = () => {
-  const generatePdf = async (name = "resume"): Promise<File> => {
-    const data = await $fetch<Blob>("/api/v001/resume/pdf/generate", {
+  const generatePdf = async (
+    name = "resume",
+    answers: Record<string, string>
+  ): Promise<File> => {
+    const data = await $fetch<Blob>("/api/resume/pdf/generate", {
       method: "POST",
       body: {
-        answers: [],
+        answers,
         generated_skills: ["Python"],
       },
       responseType: "blob",

@@ -1,6 +1,4 @@
 declare global {
-  export interface IQuestion {
-    text: string;
-  }
+  export type IQuestion = string;
 }
 export {};

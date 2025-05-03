@@ -1,14 +1,14 @@
 <template>
   <div class="container">
-    <ProgressBar
+    <!-- <ProgressBar
       v-if="stepNumber < 3"
       :totalSteps="3"
       :answered-questions="answeredCount"
       :total-questions="totalQuestions"
       :current-step="stepNumber"
       alignment="left"
-    />
-    <component :draft="draft" :is="step.component.value"></component>
+    /> -->
+    <component :draft="draft" :is="currentComponent"></component>
 
     <ButtonsPrimaryButton
       text="Продолжить"
@@ -20,7 +20,10 @@
 <script setup>
 import { useDraft } from "~/composables/resume/useDraft";
 
-const { draft, nextStep, draftProgress } = useDraft();
+const { draft, nextStep, draftProgress, stepNumber } = useDraft();
+
+const currentComponent = computed(() => draft.value.step.component);
+console.log(currentComponent.value);
 
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {

@@ -17,14 +17,14 @@ export const useDraft = () => {
   const pdfFile = ref<File | undefined>(undefined);
 
   const steps: IStep[] = [
-    { component: shallowRef(QuestionsList), title: "Базовые вопросы", id: 1 },
+    { component: QuestionsList, title: "Базовые вопросы", id: 1 },
     {
-      component: shallowRef(QuestionsList),
+      component: QuestionsList,
       title: "Дополнительные вопросы",
       id: 2,
     },
     {
-      component: shallowRef(ResumeDraftLabels),
+      component: ResumeDraftLabels,
       title: "Редактирование лейблов и просмотр PDF",
       id: 3,
     },
@@ -73,6 +73,10 @@ export const useDraft = () => {
     };
   });
 
+  watch(questions, (newV, oldV) => {
+    questionsByStep[stepNumber.value] = newV;
+  });
+
   watch(stepNumber, (newVal, oldVal) => {
     answersByStep[oldVal] = { ...answers.value };
     allAnswers.value = { ...answers.value };
@@ -86,18 +90,26 @@ export const useDraft = () => {
 
   async function nextStep() {
     if (stepNumber.value === 1) {
+      answers.value = answersByStep[stepNumber.value];
+
       getNextQuestions();
     } else if (stepNumber.value === 2) {
+      answers.value = { ...answersByStep[1], ...answersByStep[2] };
       await generateLabels();
-      pdfFile.value = await generatePdf();
+      pdfFile.value = await generatePdf("resume", {
+        ...answersByStep[1],
+        ...answersByStep[2],
+      });
     }
 
     stepNumber.value = stepNumber.value + 1;
   }
 
   return {
+    allAnswers,
     draft,
     nextStep,
     draftProgress,
+    stepNumber,
   };
 };

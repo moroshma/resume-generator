@@ -4,12 +4,12 @@
       <div class="labels-list">
         <div
           v-for="(label, index) in props.draft.labels"
-          :key="index"
+          :key="label.label"
           class="label-item"
         >
-          <h3 class="label-title">{{ label.title }}</h3>
+          <h3 class="label-title">{{ label.label }}</h3>
           <EditableField
-            v-model="label.answer"
+            v-model="label.value"
             class="label-answer"
             placeholder="Введите ваш ответ"
           />
@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 const props = defineProps<{ draft: IDraft }>();
+console.log(props.draft);
 
 async function save() {
   if (!props.draft.pdf) throw new Error("Резюме еще не сгенерировалось");

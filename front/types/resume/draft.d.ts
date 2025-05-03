@@ -11,14 +11,14 @@ declare global {
   }
 
   export interface ILabel {
-    title: string;
-    answer: string;
+    label: string;
+    value: string;
   }
 
   export interface IStep {
     id: number;
     title: string;
-    component: ShallowRef<Component>;
+    component: Component;
   }
 
   export interface IDraftProgress {

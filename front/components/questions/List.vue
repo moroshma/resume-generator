@@ -1,20 +1,36 @@
-<script setup>
-defineProps({
-  draft: Object,
+<script setup lang="ts">
+const props = defineProps<{ draft: IDraft }>();
+
+const questions = computed(() => {
+  const stepId = props.draft.step.id;
+  if (stepId === 1) {
+    return props.draft.baseQuestions;
+  } else if (stepId === 2) {
+    return props.draft.generatedQuestions;
+  }
 });
+
+const answers = computed(() => {
+  const stepId = props.draft.step.id;
+  if (stepId === 1) {
+    return props.draft.answersToBasicQuestions;
+  } else if (stepId === 2) {
+    return props.draft.answersToGeneratedQuestions;
+  } else {
+    return {};
+  }
+});
+
+console.log(props.draft);
 </script>
 
 <template>
   <div class="questions-container">
-    <div
-      v-for="question in draft.questions"
-      :key="question"
-      class="question-card"
-    >
+    <div v-for="question in questions" :key="question" class="question-card">
       <h3 class="question-title">{{ question }}</h3>
       <QuestionsAnswerField
-        v-model="draft.answers[question]"
-        :placeholder="question.placeholder"
+        v-model="answers[question]"
+        :placeholder="question"
       />
     </div>
   </div>

@@ -11,6 +11,8 @@ export const useQA = () => {
   };
 
   const getNextQuestions = async () => {
+    console.log(answers.value, "answers.value");
+
     const data: any = await $fetch("/api/qa/additional", {
       method: "POST",
       body: { answers: answers.value },
