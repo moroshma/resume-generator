@@ -20,7 +20,7 @@
       </div>
 
       <div class="actions">
-        <button class="btn export">
+        <button class="btn export" @click="handleExport(resume.resume_id)">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -36,7 +36,7 @@
             />
           </svg>
         </button>
-        <button class="btn delete" @click="handleDelete">
+        <button class="btn delete" @click="handleDelete(resume.resume_id)">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -62,6 +62,8 @@ const props = defineProps<{
   resume: IResumePreview;
 }>();
 
+const emit = defineEmits<{ exportResume: number[]; deleteResume: number[] }>();
+
 const isHovered = ref(false);
 //d1242d
 //17837b
@@ -72,7 +74,13 @@ const cardStyle = computed(() => ({
     : "rotate3d(0, 0, 0, 0deg)",
 }));
 
-function handleDelete() {}
+function handleExport(id: number) {
+  emit("exportResume", id);
+}
+
+function handleDelete(id: number) {
+  emit("deleteResume", id);
+}
 </script>
 
 <style scoped>
