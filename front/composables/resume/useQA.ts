@@ -22,7 +22,7 @@ export const useQA = () => {
   };
 
   const generateLabels = async () => {
-    const data: any = await $fetch("/api/qa/labels", {
+    const data: any = await $fetch("api/labels/generate", {
       method: "POST",
       body: { answers: answers.value },
     });

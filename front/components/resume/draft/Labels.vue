@@ -3,7 +3,7 @@
     <div class="labels_editor">
       <div class="labels-list">
         <div
-          v-for="(label, index) in props.draft.labels"
+          v-for="label in props.draft.labels"
           :key="label.label"
           class="label-item"
         >
@@ -45,36 +45,22 @@
 </template>
 
 <script setup lang="ts">
+import { useResume } from "~/composables/resume/useResume";
+
 const props = defineProps<{ draft: IDraft }>();
+
+const { saveResume } = useResume();
 console.log(props.draft);
 
 async function save() {
   if (!props.draft.pdf) throw new Error("Резюме еще не сгенерировалось");
-  const data = new FormData();
-  data.append("resume", props.draft.pdf);
-
-  const res = await $fetch("api/resume/pdf/create", {
-    method: "POST",
-    body: data,
-  });
+  saveResume(props.draft.pdf);
 }
 
-const labels: Ref<ILabel[]> = ref([]);
 const feedback = ref("");
 const isRegenerating = ref(false);
 
-const handleRegenerate = async () => {
-  try {
-    isRegenerating.value = true;
-    // Здесь будет вызов API для перегенерации
-
-    // Тестовая перегенерация
-
-    feedback.value = "";
-  } finally {
-    isRegenerating.value = false;
-  }
-};
+const handleRegenerate = async () => {};
 </script>
 
 <style scoped>

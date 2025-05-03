@@ -1,6 +1,6 @@
 export const useResume = () => {
   const generatePdf = async (
-    name = "resume",
+    name = "resume2",
     answers: Record<string, string>
   ): Promise<File> => {
     const data = await $fetch<Blob>("/api/resume/pdf/generate", {
@@ -17,13 +17,13 @@ export const useResume = () => {
     return new File([data], name, { type: "application/pdf" });
   };
 
-  const saveResume = async (pdf: Blob) => {
-    const formData = new FormData();
-    formData.append("resume", pdf);
+  const saveResume = async (pdf: File) => {
+    const data = new FormData();
+    data.append("resume", pdf);
 
-    await $fetch("/api/v001/user/resume", {
+    const res = await $fetch("api/resume/pdf/create", {
       method: "POST",
-      body: formData,
+      body: data,
     });
   };
 
