@@ -3,6 +3,9 @@
     <div class="background"></div>
     <h1 class="title">Мои резюме</h1>
     <div v-if="error">По техническим причинам возникла ошибка</div>
+    <div v-else-if="resumes?.length === 0">
+      У вас пока нет созданных резюме.
+    </div>
     <div v-else class="card-grid">
       <ResumeCard
         v-for="(resume, index) in resumes"
@@ -23,7 +26,6 @@ const { data: resumes, error } = useFetch<IResumePreview[]>("/api/resume/list");
 </script>
 
 <style>
-/* Глобальные стили */
 :root {
   --primary: #d1242d;
   --secondary: #7ed775;
