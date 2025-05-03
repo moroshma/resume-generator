@@ -1,16 +1,9 @@
 <template>
   <div class="container">
-    <!-- <ProgressBar
-      v-if="stepNumber < 3"
-      :totalSteps="3"
-      :answered-questions="answeredCount"
-      :total-questions="totalQuestions"
-      :current-step="stepNumber"
-      alignment="left"
-    /> -->
     <component :draft="draft" :is="currentComponent"></component>
 
     <ButtonsPrimaryButton
+      v-if="draftProgress.totalSteps > stepNumber"
       text="Продолжить"
       @click="nextStep"
       style="align-self: center; margin-top: 20px"
@@ -23,7 +16,6 @@ import { useDraft } from "~/composables/resume/useDraft";
 const { draft, nextStep, draftProgress, stepNumber } = useDraft();
 
 const currentComponent = computed(() => draft.value.step.component);
-console.log(currentComponent.value);
 
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {

@@ -20,8 +20,6 @@ const answers = computed(() => {
     return {};
   }
 });
-
-console.log(props.draft);
 </script>
 
 <template>

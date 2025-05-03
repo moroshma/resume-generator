@@ -50,7 +50,6 @@ import { useResume } from "~/composables/resume/useResume";
 const props = defineProps<{ draft: IDraft }>();
 
 const { saveResume } = useResume();
-console.log(props.draft);
 
 async function save() {
   if (!props.draft.pdf) throw new Error("Резюме еще не сгенерировалось");
