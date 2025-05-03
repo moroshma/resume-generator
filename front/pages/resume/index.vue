@@ -20,32 +20,7 @@
 <script setup>
 import { useDraft } from "~/composables/resume/useDraft";
 
-const {
-  initBasicQuestions,
-  generateLabels,
-  questions,
-  getNextQuestions,
-  isLoading,
-  answers,
-  answeredCount,
-  totalQuestions,
-  labels,
-  step,
-  nextStep,
-  stepNumber,
-  allAnswers,
-  pdfUrl,
-  pdfBlob,
-} = useDraft();
-
-const draft = reactive({
-  questions,
-  answers,
-  labels,
-  allAnswers,
-  pdfUrl,
-  pdfBlob,
-});
+const { draft, nextStep, draftProgress } = useDraft();
 
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {

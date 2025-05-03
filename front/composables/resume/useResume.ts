@@ -1,14 +1,17 @@
 export const useResume = () => {
-  const generatePdf = async (labels: any) => {
+  const generatePdf = async (name = "resume"): Promise<File> => {
     const data = await $fetch<Blob>("/api/v001/resume/pdf/generate", {
       method: "POST",
-      body: { labels },
+      body: {
+        answers: [],
+        generated_skills: ["Python"],
+      },
       responseType: "blob",
     });
 
     if (!data) throw new Error("При генерации резюме возникла ошибка");
 
-    return URL.createObjectURL(data);
+    return new File([data], name, { type: "application/pdf" });
   };
 
   const saveResume = async (pdf: Blob) => {
@@ -40,7 +43,7 @@ export const useResume = () => {
 
   function downloadAsFile(data: Blob) {
     let a = document.createElement("a");
-    let file = new Blob([data], { type: "application/json" });
+    let file = new Blob([data], { type: "application/pdf" });
     a.href = URL.createObjectURL(file);
     a.download = "resume.pdf";
     a.click();

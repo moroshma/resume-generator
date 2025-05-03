@@ -1,10 +1,7 @@
 export const useQA = () => {
-  const questions = ref<any>([]);
+  const questions = ref<IQuestion[]>([]);
   const answers = ref<Record<string, string>>({});
-  const labels = ref<any>([]);
-  const pdfUrl = ref("");
-
-  const totalQuestions = computed(() => questions.value.length);
+  const labels = ref<ILabel[]>([]);
 
   const isLoading = ref(false);
 
@@ -35,11 +32,8 @@ export const useQA = () => {
     questions,
     answers,
     labels,
-    pdfUrl,
     initBasicQuestions,
     getNextQuestions,
     generateLabels,
-    isLoading,
-    totalQuestions,
   };
 };

@@ -7,9 +7,9 @@
           :key="index"
           class="label-item"
         >
-          <h3 class="label-title">{{ label.label }}</h3>
+          <h3 class="label-title">{{ label.title }}</h3>
           <EditableField
-            v-model="label.value"
+            v-model="label.answer"
             class="label-answer"
             placeholder="Введите ваш ответ"
           />
@@ -37,7 +37,7 @@
         :isLoading="false"
         :error="null"
         :isSaving="false"
-        :pdfUrl="props.draft.pdfUrl"
+        :pdfFile="props.draft.pdf"
         @save="save"
       />
     </div>
@@ -45,15 +45,12 @@
 </template>
 
 <script setup lang="ts">
-interface Label {
-  title: string;
-  answer: string;
-}
-const props = defineProps(["draft"]);
+const props = defineProps<{ draft: IDraft }>();
 
 async function save() {
+  if (!props.draft.pdf) throw new Error("Резюме еще не сгенерировалось");
   const data = new FormData();
-  data.append("resume", props.draft.pdfBlob, "naming2.pdf");
+  data.append("resume", props.draft.pdf);
 
   const res = await $fetch("api/resume/pdf/create", {
     method: "POST",
@@ -61,7 +58,7 @@ async function save() {
   });
 }
 
-const labels: Ref<Label[]> = ref([]);
+const labels: Ref<ILabel[]> = ref([]);
 const feedback = ref("");
 const isRegenerating = ref(false);
 

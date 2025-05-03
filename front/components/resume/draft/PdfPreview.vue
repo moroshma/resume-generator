@@ -35,12 +35,18 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  pdfUrl: string | null;
+const props = defineProps<{
+  pdfFile: File | undefined;
   isLoading: boolean;
   isSaving: boolean;
   error: Error | null;
 }>();
+
+const pdfUrl = computed(() => {
+  if (props.pdfFile) {
+    return URL.createObjectURL(props.pdfFile);
+  }
+});
 
 const emit = defineEmits<{
   (e: "save"): void;

@@ -3,3 +3,4 @@ declare global {
     text: string;
   }
 }
+export {};
