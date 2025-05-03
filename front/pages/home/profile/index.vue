@@ -140,11 +140,6 @@ definePageMeta({
 
 const {
   data,
-  pending,
-
-  isSaving,
-  lastSaved,
-  saveError,
 
   addEducation,
   removeEducation,
