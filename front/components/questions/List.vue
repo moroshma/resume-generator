@@ -7,6 +7,8 @@ const props = defineProps<{
 
 const isLoadingQuestions = computed(() => props.loading.isLoadingQuestions);
 
+const loadingCardCount = 5;
+
 const hasValidationError = computed(
   () => props.error?.name == "ValidationError"
 );
@@ -59,7 +61,11 @@ watch(hasValidationError, () => {
 </script>
 
 <template>
-  <div v-if="isLoadingQuestions">loading</div>
+  <div v-if="isLoadingQuestions">
+    <div v-for="index in loadingCardCount">
+      <div class="question-card"></div>
+    </div>
+  </div>
   <div v-else class="questions-container">
     <div
       ref="questionsRef"

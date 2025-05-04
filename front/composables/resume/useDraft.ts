@@ -91,6 +91,8 @@ export const useDraft = () => {
         answers.value = newV.answersToGeneratedQuestions;
       }
       allAnswers.value = { ...answers.value };
+
+      console.log(newV, "new");
     },
     {
       deep: true,
@@ -114,7 +116,7 @@ export const useDraft = () => {
     if (stepNumber.value === 2) {
       answers.value = answersByStep[stepNumber.value - 1];
 
-      await getNextQuestions();
+      getNextQuestions();
     } else if (stepNumber.value === 3) {
       answers.value = { ...answersByStep[1], ...answersByStep[2] };
       await generateLabels();

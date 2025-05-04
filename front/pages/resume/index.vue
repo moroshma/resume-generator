@@ -3,7 +3,7 @@
     <component
       :draft="draft"
       :error="validationError"
-      :is="currentComponent"
+      :is="draftProgress.step.component"
       :loading="{ isLoadingQuestions }"
     ></component>
 
@@ -15,7 +15,8 @@
     />
   </div>
 </template>
-<script setup>
+
+<script setup lang="ts">
 import { useDraft } from "~/composables/resume/useDraft";
 
 const {
@@ -27,11 +28,9 @@ const {
   isLoadingQuestions,
 } = useDraft();
 
-const currentComponent = computed(() => draft.value.step.component);
-
-async function nextStepHandle() {
+function nextStepHandle() {
   try {
-    await nextStep();
+    nextStep();
   } catch (error) {
     console.warn(error);
   }
