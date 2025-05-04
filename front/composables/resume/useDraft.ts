@@ -93,8 +93,6 @@ export const useDraft = () => {
         answers.value = newV.answersToGeneratedQuestions;
       }
       allAnswers.value = { ...answers.value };
-
-      console.log(newV, "new");
     },
     {
       deep: true,
