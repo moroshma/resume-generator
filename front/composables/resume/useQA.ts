@@ -4,6 +4,7 @@ export const useQA = () => {
   const labels = ref<ILabel[]>([]);
 
   const isLoading = ref(false);
+  const isLoadingLabels = ref(false);
 
   const areAllQuestionsAnswered = (): boolean => {
     for (let i = 0; i < questions.value.length; i++) {
@@ -49,12 +50,34 @@ export const useQA = () => {
   };
 
   const generateLabels = async () => {
-    const data: ILabel[] = await $fetch("api/labels/generate", {
-      method: "POST",
-      body: { answers: answers.value },
-    });
+    isLoadingLabels.value = true;
+    try {
+      const data: ILabel[] = await $fetch("api/labels/generate", {
+        method: "POST",
+        body: { answers: answers.value },
+      });
 
-    labels.value = data;
+      labels.value = data;
+    } catch (error) {
+    } finally {
+      isLoadingLabels.value = false;
+    }
+  };
+
+  const regenerateLabels = async (new_info: string) => {
+    isLoadingLabels.value = true;
+
+    try {
+      const data: ILabel[] = await $fetch("/api/labels/regenerate", {
+        method: "POST",
+        body: { current_data: labels.value, new_info },
+      });
+
+      labels.value = data;
+    } catch (error) {
+    } finally {
+      isLoadingLabels.value = false;
+    }
   };
 
   return {
@@ -62,9 +85,11 @@ export const useQA = () => {
     answers,
     labels,
     isLoading,
+    isLoadingLabels,
     initBasicQuestions,
     getNextQuestions,
     generateLabels,
     areAllQuestionsAnswered,
+    regenerateLabels,
   };
 };
