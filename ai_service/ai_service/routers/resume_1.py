@@ -1,5 +1,7 @@
 # routers/resume.py
-
+import logging
+import datetime
+import traceback
 from fastapi import APIRouter, Body, HTTPException, status, Response
 from typing import List, Dict, Any
 # Import the updated NeuralService (assuming filename is neural.py)
@@ -13,12 +15,21 @@ from ai_service.schemas.resume_1 import (
     UserAnswers,
     UpdateRequest,
     QuestionsResponse,
-    ResumePdfRequest,
     LabelValueItem
     # Removed GeneratedSkillsResponse, UpdatedSkillsResponse as we'll redefine/rename below
 )
 
 from ai_service.config import settings
+
+log = logging.getLogger(__name__)
+
+
+class ResumeDataPdfRequest(BaseModel):
+    """
+    Схема запроса для генерации PDF на основе структурированных данных.
+    """
+    resume_data: List[LabelValueItem] = Field(..., description="Полные структурированные данные резюме (список label-value) для генерации PDF.")
+
 
 # --- Define necessary Response Schemas ---
 
@@ -146,63 +157,55 @@ async def update_resume_section(update_req: UpdateRequest = Body(...)):
 
 # PDF Generation Endpoint - Assumes skills/data are generated beforehand and passed in request
 @router.post("/api/v001/resume/pdf/generate")
-async def generate_resume_pdf(request_data: ResumePdfRequest = Body(...)):
+async def generate_resume_pdf(request_data: ResumeDataPdfRequest = Body(...)):
     """
-    Generates a PDF resume summary based on provided answers and previously generated skills/data.
-    Requires authentication (JWT - implied, handle elsewhere).
+    Генерирует PDF резюме на основе предоставленных структурированных данных (label-value).
 
-    Note: Expects `generated_skills` (in the format required by `create_resume_pdf`)
-          to be included in the request body, typically obtained from a prior call
-          to `/api/v001/resume/label/generate`.
+    Принимает:
+        request_data (ResumeDataPdfRequest): Тело запроса, содержащее список `resume_data`.
 
-    Returns:
-        Response: A PDF file download.
+    Возвращает:
+        Response: PDF файл для скачивания.
     """
-    if not request_data.answers:
+    # Проверяем, что список данных не пустой
+    if not request_data.resume_data:
          raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Answers cannot be empty for PDF generation.",
+            detail="Resume data cannot be empty for PDF generation.",
         )
-    # Add validation for generated_skills structure if needed by create_resume_pdf
-    if not request_data.generated_skills:
-         raise HTTPException(
-             status_code=status.HTTP_400_BAD_REQUEST,
-             detail="Generated skills/data must be provided for PDF generation.",
-         )
 
     try:
-        # Directly use the provided answers and generated skills for PDF creation
-        pdf_bytes = create_resume_pdf(request_data.answers, request_data.generated_skills)
+        # Преобразуем список Pydantic моделей в список словарей для pdf_generator
+        # Используем model_dump() для Pydantic v2 или dict() для v1
+        resume_data_list = [item.model_dump() if hasattr(item, 'model_dump') else item.dict() for item in request_data.resume_data]
 
-        # Ensure pdf_bytes is actually bytes (create_resume_pdf might return buffer/stream)
-        if hasattr(pdf_bytes, 'read'): # Check if it's a file-like object
-            pdf_content = pdf_bytes.read()
-            if hasattr(pdf_bytes, 'close'):
-                pdf_bytes.close()
-        elif isinstance(pdf_bytes, bytes):
-            pdf_content = pdf_bytes
-        else:
-            # Handle unexpected type from create_resume_pdf
-            raise TypeError(f"create_resume_pdf returned unexpected type: {type(pdf_bytes)}")
+        # Вызываем обновленную функцию генерации PDF
+        pdf_bytes = create_resume_pdf(resume_data_list)
 
+        # Проверка типа остается важной
+        if not isinstance(pdf_bytes, bytes):
+             # Логирование уже должно быть в create_resume_pdf или generate
+             raise TypeError(f"create_resume_pdf returned unexpected type: {type(pdf_bytes)}")
 
+        # Формируем ответ с PDF файлом
         return Response(
-            content=pdf_content,
+            content=pdf_bytes,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": "attachment; filename=resume_summary.pdf"
+                # Можно добавить дату/время в имя файла
+                "Content-Disposition": f"attachment; filename=resume_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
             }
         )
 
     except HTTPException as http_exc:
-        # Re-raise HTTPExceptions that might occur during input validation
+        # Перехватываем ошибки валидации FastAPI
         raise http_exc
     except Exception as e:
-        # Handle potential errors during PDF creation.
-        print(f"Error in /api/v001/resume/pdf/generate endpoint during PDF creation: {e}")
+        # Обрабатываем ошибки во время генерации PDF
+        log.error(f"Error in /api/v001/resume/pdf/generate endpoint during PDF creation: {e}", exc_info=True)
         import traceback
-        traceback.print_exc() # Print full traceback for PDF errors
+        traceback.print_exc() # Печатаем traceback для отладки PDF ошибок
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate resume PDF. Please check PDF generation logic.",
+            detail=f"Failed to generate resume PDF. Internal error: {str(e)}",
         )

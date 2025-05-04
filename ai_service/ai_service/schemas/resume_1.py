@@ -44,11 +44,6 @@ class UpdatedSkillsResponse(BaseModel):
      updated_hard_skills: str = Field(..., description="The updated hard skills text.")
 
 
-class ResumePdfRequest(BaseModel):
-    answers: Dict[str, str] = Field(..., description="Словарь ответов пользователя (вопрос: ответ)")
-    generated_skills: List[str] = Field(..., description="Список строковых представлений hard skills")
-
-
 class LabelValueItem(BaseModel):
     """Represents a single label-value pair returned by the AI service."""
     label: str = Field(..., description="The extracted label or category name.")
