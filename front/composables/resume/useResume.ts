@@ -1,45 +1,62 @@
 export const useResume = () => {
-  const generatePdf = async (labels: any) => {
-    const { data } = await useFetch<any>("/api/v001/resume/pdf/generate", {
+  const generatePdf = async (
+    name = "resume2",
+    answers: Record<string, string>
+  ): Promise<File> => {
+    const data = await $fetch<Blob>("/api/resume/pdf/generate", {
       method: "POST",
-      body: { labels },
+      body: {
+        answers,
+        generated_skills: ["Python"],
+      },
       responseType: "blob",
     });
 
-    return URL.createObjectURL(data.value);
+    if (!data) throw new Error("При генерации резюме возникла ошибка");
+
+    return new File([data], name, { type: "application/pdf" });
   };
 
-  const saveResume = async (pdf: Blob) => {
-    const formData = new FormData();
-    formData.append("pdf", pdf);
+  const saveResume = async (pdf: File) => {
+    const data = new FormData();
+    data.append("resume", pdf);
 
-    await useFetch("/api/v001/user/resume", {
+    const res = await $fetch("api/resume/pdf/create", {
       method: "POST",
-      body: formData,
+      body: data,
     });
   };
 
-  const steps = ref([
-    {
-      title: "Базовые вопросы",
-      hasQuestions: true,
-    },
-    {
-      title: "Дополнительные вопросы",
-      hasQuestions: true,
-    },
-    {
-      title: "Редактирование лейблов",
-      hasQuestions: false,
-    },
-    {
-      title: "Просмотр резюме",
-      hasQuestions: false,
-    },
-  ]);
+  const exportResume = async (id: number) => {
+    const resume: File | undefined = await $fetch(`/api/resume/pdf/${id}`);
+
+    if (resume) downloadAsFile(resume);
+    else throw new Error("При экспорте резюме возникла ошибка");
+  };
+
+  const deleteResume = async (id: number) => {
+    try {
+      await $fetch(`/api/resume/pdf/${id}`, {
+        method: "DELETE",
+      });
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  function downloadAsFile(data: Blob) {
+    let a = document.createElement("a");
+    let file = new Blob([data], { type: "application/pdf" });
+    a.href = URL.createObjectURL(file);
+    a.download = "resume.pdf";
+    a.click();
+    a.remove();
+  }
 
   return {
     generatePdf,
     saveResume,
+    exportResume,
+    deleteResume,
   };
 };

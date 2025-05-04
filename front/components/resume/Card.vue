@@ -10,17 +10,17 @@
     <div class="content">
       <div class="header">
         <h3 class="title">{{ resume.title }}</h3>
-        <div class="progress" :style="{ '--progress': resume.progress + '%' }">
-          <span>{{ resume.progress }}%</span>
+        <div class="progress" :style="{ '--progress': '100%' }">
+          <span>100%</span>
         </div>
       </div>
 
       <div class="meta">
-        <div class="date">{{ resume.date }}</div>
+        <div class="date">{{ resume.created_at }}</div>
       </div>
 
       <div class="actions">
-        <button class="btn export">
+        <button class="btn export" @click="handleExport(resume.resume_id)">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -36,7 +36,7 @@
             />
           </svg>
         </button>
-        <button class="btn delete" @click="handleDelete">
+        <button class="btn delete" @click="handleDelete(resume.resume_id)">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -57,24 +57,30 @@
   </div>
 </template>
 
-<script setup>
-import { computed, ref } from "vue";
+<script setup lang="ts">
+const props = defineProps<{
+  resume: IResumePreview;
+}>();
 
-const props = defineProps({
-  resume: {
-    type: Object,
-    required: true,
-  },
-});
+const emit = defineEmits<{ exportResume: number[]; deleteResume: number[] }>();
 
 const isHovered = ref(false);
-
+//d1242d
+//17837b
 const cardStyle = computed(() => ({
-  "--card-color": props.resume.color,
+  "--card-color": props.resume.resume_id % 2 == 0 ? "#d1242d" : "#17837b",
   transform: isHovered.value
     ? "rotate3d(0.5, -0.3, 0, 8deg)"
     : "rotate3d(0, 0, 0, 0deg)",
 }));
+
+function handleExport(id: number) {
+  emit("exportResume", id);
+}
+
+function handleDelete(id: number) {
+  emit("deleteResume", id);
+}
 </script>
 
 <style scoped>

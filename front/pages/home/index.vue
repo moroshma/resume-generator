@@ -2,45 +2,49 @@
   <div class="container">
     <div class="background"></div>
     <h1 class="title">Мои резюме</h1>
-    <div class="card-grid">
+    <div v-if="error">По техническим причинам возникла ошибка</div>
+    <div v-else-if="resumes?.length === 0 || !resumes">
+      У вас пока нет созданных резюме.
+    </div>
+    <div v-else class="card-grid">
       <ResumeCard
         v-for="(resume, index) in resumes"
         :key="index"
         :resume="resume"
+        @export-resume="handleExport"
+        @delete-resume="handleDelete"
       />
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { useResume } from "~/composables/resume/useResume";
+
 definePageMeta({
   layout: "home-layout",
   private: true,
 });
 
-const resumes = ref([
-  {
-    id: 1,
-    title: "Senior Frontend Developer",
-    date: "Создано 15.07.2023",
-    template: "Modern",
-    progress: 92,
-    color: "#17837b",
-  },
-  {
-    id: 2,
-    title: "UX Team Lead",
-    date: "Создано 10.08.2023",
-    template: "Creative",
-    progress: 60,
-    color: "#d1242d",
-  },
-  // ... больше моковых данных
-]);
+const {
+  data: resumes,
+  error,
+  refresh,
+} = useFetch<IResumePreview[]>("/api/resume/list");
+
+const { exportResume, deleteResume } = useResume();
+
+function handleExport(id: number) {
+  exportResume(id);
+}
+
+async function handleDelete(id: number) {
+  await deleteResume(id);
+  refresh();
+}
 </script>
 
 <style>
-/* Глобальные стили */
 :root {
   --primary: #d1242d;
   --secondary: #7ed775;

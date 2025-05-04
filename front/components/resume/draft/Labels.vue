@@ -1,82 +1,72 @@
 <template>
   <div class="labels-container">
-    <div class="labels-list">
-      <div v-for="(label, index) in labels" :key="index" class="label-item">
-        <h3 class="label-title">{{ label.title }}</h3>
-        <EditableField
-          v-model="label.answer"
-          class="label-answer"
-          placeholder="Введите ваш ответ"
+    <div class="labels_editor">
+      <div class="labels-list">
+        <div
+          v-for="label in props.draft.labels"
+          :key="label.label"
+          class="label-item"
+        >
+          <h3 class="label-title">{{ label.label }}</h3>
+          <EditableField
+            v-model="label.value"
+            class="label-answer"
+            placeholder="Введите ваш ответ"
+          />
+        </div>
+      </div>
+
+      <div class="feedback-section">
+        <textarea
+          v-model="feedback"
+          class="feedback-input"
+          placeholder="Опишите, что нужно изменить или улучшить в сгенерированных лейблах..."
+        />
+      </div>
+
+      <div class="actions" v-if="feedback.trim()">
+        <ButtonsPrimaryButton
+          :loading="isRegenerating"
+          text="Перегенерировать лейблы"
+          @click="handleRegenerate"
         />
       </div>
     </div>
-
-    <div class="feedback-section">
-      <textarea
-        v-model="feedback"
-        class="feedback-input"
-        placeholder="Опишите, что нужно изменить или улучшить в сгенерированных лейблах..."
-      />
-    </div>
-
-    <div class="actions" v-if="feedback.trim()">
-      <ButtonsPrimaryButton
-        :loading="isRegenerating"
-        text="Перегенерировать лейблы"
-        @click="handleRegenerate"
+    <div class="pdf">
+      <ResumeDraftPdfPreview
+        :isLoading="false"
+        :error="null"
+        :isSaving="false"
+        :pdfFile="props.draft.pdf"
+        @save="save"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-interface Label {
-  title: string;
-  answer: string;
+import { useResume } from "~/composables/resume/useResume";
+
+const props = defineProps<{ draft: IDraft; error: Error | undefined }>();
+
+const { saveResume } = useResume();
+
+async function save() {
+  if (!props.draft.pdf) throw new Error("Резюме еще не сгенерировалось");
+  saveResume(props.draft.pdf);
 }
 
-const initialLabels: Label[] = [
-  {
-    title: "Профессиональный опыт",
-    answer: "5 лет работы fullstack разработчиком",
-  },
-  {
-    title: "Ключевые навыки",
-    answer: "JavaScript, TypeScript, Node.js, Vue, React",
-  },
-  { title: "Образование", answer: "Бакалавр компьютерных наук, МГУ" },
-  {
-    title: "Достижения",
-    answer: "Оптимизировал производительность приложения на 40%",
-  },
-];
-
-const labels: Ref<Label[]> = ref([...initialLabels]);
 const feedback = ref("");
 const isRegenerating = ref(false);
 
-const handleRegenerate = async () => {
-  try {
-    isRegenerating.value = true;
-    // Здесь будет вызов API для перегенерации
-
-    // Тестовая перегенерация
-    labels.value = initialLabels.map((label) => ({
-      ...label,
-      answer: `${label.answer} (обновлено)`,
-    }));
-
-    feedback.value = "";
-  } finally {
-    isRegenerating.value = false;
-  }
-};
+const handleRegenerate = async () => {};
 </script>
 
 <style scoped>
 .labels-container {
-  max-width: 800px;
-  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 1rem;
 }
 
