@@ -19,22 +19,25 @@ export const useQA = () => {
   };
 
   const initBasicQuestions = async () => {
-    const data: any = await $fetch("/api/qa/basic");
+    const data: { questions: IQuestion[] } = await $fetch("/api/qa/basic");
     questions.value = data.questions;
   };
 
   const getNextQuestions = async () => {
-    const data: any = await $fetch("/api/qa/additional", {
-      method: "POST",
-      body: { answers: answers.value },
-    });
+    const data: { questions: IQuestion[] } = await $fetch(
+      "/api/qa/additional",
+      {
+        method: "POST",
+        body: { answers: answers.value },
+      }
+    );
 
     questions.value = data.questions;
     answers.value = {};
   };
 
   const generateLabels = async () => {
-    const data: any = await $fetch("api/labels/generate", {
+    const data: ILabel[] = await $fetch("api/labels/generate", {
       method: "POST",
       body: { answers: answers.value },
     });
