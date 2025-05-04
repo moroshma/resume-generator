@@ -4,6 +4,7 @@
       :draft="draft"
       :error="validationError"
       :is="currentComponent"
+      :loading="{ isLoadingQuestions }"
     ></component>
 
     <ButtonsPrimaryButton
@@ -17,15 +18,23 @@
 <script setup>
 import { useDraft } from "~/composables/resume/useDraft";
 
-const { draft, nextStep, draftProgress, stepNumber, validationError } =
-  useDraft();
+const {
+  draft,
+  nextStep,
+  draftProgress,
+  stepNumber,
+  validationError,
+  isLoadingQuestions,
+} = useDraft();
 
 const currentComponent = computed(() => draft.value.step.component);
 
 async function nextStepHandle() {
   try {
     await nextStep();
-  } catch (error) {}
+  } catch (error) {
+    console.warn(error);
+  }
 }
 
 watch(stepNumber, async (newVal, oldVal) => {

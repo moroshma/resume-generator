@@ -1,5 +1,11 @@
 <script setup lang="ts">
-const props = defineProps<{ draft: IDraft; error: Error | undefined }>();
+const props = defineProps<{
+  draft: IDraft;
+  error: Error | undefined;
+  loading: ILoading;
+}>();
+
+const isLoadingQuestions = computed(() => props.loading.isLoadingQuestions);
 
 const hasValidationError = computed(
   () => props.error?.name == "ValidationError"
@@ -53,7 +59,8 @@ watch(hasValidationError, () => {
 </script>
 
 <template>
-  <div class="questions-container">
+  <div v-if="isLoadingQuestions">loading</div>
+  <div v-else class="questions-container">
     <div
       ref="questionsRef"
       v-for="question in questions"

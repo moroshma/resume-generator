@@ -12,6 +12,7 @@ export const useDraft = () => {
     answers,
     labels,
     areAllQuestionsAnswered,
+    isLoading: isLoadingQuestions,
   } = useQA();
 
   const { generatePdf } = useResume();
@@ -125,6 +126,7 @@ export const useDraft = () => {
   }
 
   return {
+    isLoadingQuestions,
     allAnswers,
     draft,
     nextStep,
