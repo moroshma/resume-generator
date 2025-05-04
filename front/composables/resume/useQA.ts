@@ -17,6 +17,7 @@ export const useQA = () => {
     });
 
     questions.value = data.questions;
+    console.log("fetch end");
   };
 
   const generateLabels = async () => {

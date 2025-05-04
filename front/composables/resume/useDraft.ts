@@ -49,10 +49,6 @@ export const useDraft = () => {
     initBasicQuestions();
   });
 
-  const answeredCount = computed(() => {
-    return Object.values(answers.value).length;
-  });
-
   const draft = computed<IDraft>((): IDraft => {
     return {
       id: 1,
@@ -80,20 +76,16 @@ export const useDraft = () => {
   watch(stepNumber, (newVal, oldVal) => {
     answersByStep[oldVal] = { ...answers.value };
     allAnswers.value = { ...answers.value };
-    questionsByStep[oldVal] = [...questions.value];
-
-    questions.value = questionsByStep[newVal];
-    Object.assign(answers.value, answersByStep[newVal]);
-
-    answers.value = {};
+    questionsByStep[stepNumber.value] = questions.value;
   });
 
   async function nextStep() {
-    if (stepNumber.value === 1) {
-      answers.value = answersByStep[stepNumber.value];
+    stepNumber.value = stepNumber.value + 1;
+    if (stepNumber.value === 2) {
+      answers.value = answersByStep[stepNumber.value - 1];
 
-      getNextQuestions();
-    } else if (stepNumber.value === 2) {
+      await getNextQuestions();
+    } else if (stepNumber.value === 3) {
       answers.value = { ...answersByStep[1], ...answersByStep[2] };
       await generateLabels();
       pdfFile.value = await generatePdf("resume", {
@@ -101,8 +93,6 @@ export const useDraft = () => {
         ...answersByStep[2],
       });
     }
-
-    stepNumber.value = stepNumber.value + 1;
   }
 
   return {
