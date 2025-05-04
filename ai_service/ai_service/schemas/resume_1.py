@@ -4,7 +4,7 @@
 # Import BaseModel from Pydantic for data validation and serialization.
 # Import typing hints for clarity and type checking.
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 # --- Annotation [schemas/resume.py: 2] ---
 # Schema for receiving user answers.
@@ -16,16 +16,6 @@ class UserAnswers(BaseModel):
     answers: Dict[str, str] = Field(..., description="Dictionary of question-answer pairs provided by the user.")
     # Example: {"question1": "answer1", "question2": "answer2"}
 
-# --- Annotation [schemas/resume.py: 4] ---
-# Schema for the request to update an existing resume section.
-# Used as input for the '/update' endpoint.
-class UpdateRequest(BaseModel):
-    # --- Annotation [schemas/resume.py: 5] ---
-    # The current text content of the resume section to be updated.
-    current_text: str = Field(..., description="The existing text of the resume section.")
-    # --- Annotation [schemas/resume.py: 6] ---
-    # The new information provided by the user to be incorporated.
-    new_info: str = Field(..., description="New information to add or integrate.")
 
 # --- Annotation [schemas/resume.py: 7] ---
 # Schema for returning a list of questions to the user.
@@ -57,3 +47,19 @@ class UpdatedSkillsResponse(BaseModel):
 class ResumePdfRequest(BaseModel):
     answers: Dict[str, str] = Field(..., description="Словарь ответов пользователя (вопрос: ответ)")
     generated_skills: List[str] = Field(..., description="Список строковых представлений hard skills")
+
+
+class LabelValueItem(BaseModel):
+    """Represents a single label-value pair returned by the AI service."""
+    label: str = Field(..., description="The extracted label or category name.")
+    value: str = Field(..., description="The extracted value, can be string, list, etc.")
+
+
+# --- Annotation [schemas/resume.py: 4] ---
+# Schema for the request to update an existing resume section.
+# Used as input for the '/update' endpoint.
+class UpdateRequest(BaseModel):
+    """Request body for updating resume data."""
+    # NeuralService.update_resume expects List[Dict[str, Any]] for current_data
+    current_data: List[LabelValueItem] = Field(..., description="The current structured data as a list of label-value pairs.")
+    new_info: str = Field(..., description="New information or instructions from the user.")
