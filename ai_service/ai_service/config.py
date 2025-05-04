@@ -20,11 +20,15 @@ class Settings(BaseSettings):
     # API Key specifically for the external LLM service (OpenRouter).
     # Loaded from the 'OPENROUTER_API_KEY' environment variable.
     # Default value "some-key" is provided but should be overridden in .env.
-    API_KEY: str = os.getenv("OPENROUTER_API_KEY", "some-key")
+    API_KEY: str = os.getenv("API_KEY", "some-key")
 
     # --- Annotation [config.py: 4] ---
     # URL of the external LLM service endpoint.
-    API_URL: str = "https://openrouter.ai/api/v1/chat/completions"
+    API_URL: str = os.getenv("API_URL","https://api.groq.com/openai/v1/chat/completions")
+
+    # MODEL
+
+    MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-r1-distill-llama-70b")
 
     # --- Annotation [config.py: 5] ---
     # URL of your separate authentication microservice.
@@ -102,6 +106,25 @@ class Settings(BaseSettings):
 ### Пример ответа:
 {"questions": ["Как вы настраивали асинхронные задачи в Django?", "Какие механизмы кеширования применяли в ваших проектах?"]}
     """
+
+
+
+    UPDATE_PROMPT: str = """Ты профессиональный HR-ассистент. Твоя задача - обновить предоставленный раздел резюме на основе дополнительной информации от пользователя.
+    ### Правила:
+    - Возьми "Текущий текст раздела".
+    - Интегрируй "Дополнительную информацию" гармонично, улучшая и дополняя исходный текст.
+    - Сохрани профессиональный стиль и смысл.
+    - Верни ТОЛЬКО обновленный текст раздела.
+    - НЕ используй Markdown-форматирование (никаких ```).
+    - используй JSON с исправлениями в соответствующих полях. Пример:
+    {
+        "hard_skills": "C/C++, HTML, CSS, REST API, FastAPI"
+        "experience": "Я работал в X компании на позиции... Я сопровождал весь проект от создания до выката в прод..."
+        "technologies": "..."
+        ...
+    }
+    """
+
 
     # --- Annotation [config.py: 8] ---
     # The initial list of questions (Stage 1) asked to the user.

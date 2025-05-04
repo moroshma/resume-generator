@@ -1,245 +1,343 @@
 # services/neural.py
 
-# --- Annotation [services/neural.py: 1] ---
-# Use httpx for making async HTTP calls to the LLM API.
 import httpx
 import json
-import re
-# --- Annotation [services/neural.py: 2] ---
-# Import settings and typing helpers.
-from ai_service.config import Settings
-from typing import Dict, List # Explicit type hints
+# import re # Keep if needed, but json_object format helps
+from ai_service.config import Settings # Assuming Settings now has HF_ROUTER_API_KEY etc.
+from typing import Dict, List, Any
 
 class NeuralService:
-    # --- Annotation [services/neural.py: 3] ---
-    # Constructor (__init__) to initialize the service instance.
-    # It takes the application settings as an argument.
     def __init__(self, settings: Settings):
         self.settings = settings
-        # --- Annotation [services/neural.py: 4] ---
-        # Prepare headers required by the OpenRouter API (or other LLM API).
-        # Note: Content-Type is often added automatically by httpx when using json=
-        self.headers = {
-            "Authorization": f"Bearer {self.settings.API_KEY}",
-            # "Content-Type": "application/json" # Usually not needed with httpx json=
-        }
-        # --- Annotation [services/neural.py: 5] ---
-        # Add checks during initialization to warn if critical settings seem missing.
+        # --- Annotation [HF Router Change 1]: Use HF Router settings ---
+        # Ensure your Settings class has these attributes defined
+        # e.g., HF_ROUTER_API_KEY = "hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        #       HF_ROUTER_API_URL = "https://router.huggingface.co/novita/v3/openai/chat/completions"
+        #       HF_ROUTER_MODEL_ID = "deepseek/deepseek-v3-0324" # Or your chosen model
+        self.api_key = self.settings.API_KEY
+        self.api_url = self.settings.API_URL
+        self.model_id = self.settings.MODEL_ID
 
+        # --- Annotation [HF Router Change 2]: Set up standard OpenAI-compatible headers ---
+        # This header format is correct for the HF Router endpoint
+        if not self.api_key or not self.api_key.startswith("hf_"): # Check for missing or invalid-looking key
+             print("Warning: HF_ROUTER_API_KEY not set or doesn't look like a valid Hugging Face token in config.")
+             # Decide if you want to proceed without auth or raise an error
+             self.headers = {
+                 "Content-Type": "application/json",
+             }
+             # Consider raising ValueError("HF_ROUTER_API_KEY is missing or invalid.")
+        else:
+             self.headers = {
+                 "Authorization": f"Bearer {self.api_key}",
+                 "Content-Type": "application/json",
+             }
 
-        if not self.settings.API_KEY or self.settings.API_KEY == "some-key":
-            print("Warning: OPENROUTER_API_KEY not set or using default in config.")
+        # --- Annotation [HF Router Change 3]: Update initialization checks/warnings ---
+        if not self.api_url:
+             print("Warning: HF_ROUTER_API_URL is not set in config.")
+             # Consider raising ValueError("HF_ROUTER_API_URL is missing.")
+        if not self.model_id:
+             print("Warning: HF_ROUTER_MODEL_ID is not set in config.")
+             # Consider raising ValueError("HF_ROUTER_MODEL_ID is missing.")
+
+        # Keep the AUTH_SERVICE_URL check if it's still relevant to your architecture
         if not self.settings.AUTH_SERVICE_URL or "localhost" in self.settings.AUTH_SERVICE_URL:
-             print(f"Warning: AUTH_SERVICE_URL is not set or using default/localhost value ({self.settings.AUTH_SERVICE_URL}). Ensure it's correct for your environment (e.g., Docker Compose service name).")
+             print(f"Warning: AUTH_SERVICE_URL is not set or using default/localhost value ({self.settings.AUTH_SERVICE_URL}). Ensure it's correct for your environment.")
 
-    # --- Annotation [services/neural.py: 6] ---
-    # Internal helper method to call the LLM API. Made async to use httpx.
-    # Takes user content and the specific system prompt to use.
-    async def _call_api(self, user_content: str, system_prompt: str) -> str:
-        """Sends request to the LLM API and returns the response content."""
-        # --- Annotation [services/neural.py: 7] ---
-        # Define the payload for the LLM API request according to its documentation.
-        data = {
 
-            "model": "deepseek/deepseek-r1-zero:free", # Consider model choice based on task (coder good for JSON/instructions)
+    async def _call_api(self, user_content: str, system_prompt: str, request_json_output: bool = False) -> str:
+        """Sends request to the Hugging Face Router API (OpenAI format) and returns the response content."""
 
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ],
-            "temperature": 0.4, # Adjust temperature (0.3-0.5 often good for structured output)
-            "max_tokens": 500,
-            # --- Annotation [services/neural.py: 8] ---
-            # Request JSON output format if the model/API supports it.
-            # This increases the chance of getting well-formatted JSON, especially for questions.
-            # Check OpenRouter/model docs if "json_object" is the correct value.
-            # Some APIs might use "response_format": { "type": "json" } etc.
-            "response_format": {"type": "json_object"}
+        # --- Annotation [HF Router Change 4]: Construct OpenAI-compatible payload ---
+        # This structure is identical to what the HF Router endpoint expects. No changes needed here.
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_content})
+
+        print('\n-------\n',self.api_key,'\n-------\n')
+
+        data: Dict[str, Any] = {
+            "model": self.model_id,
+            "messages": messages,
+            "temperature": 0.4, # Adjust as needed
+            "max_tokens": 4096, # Adjust based on model/needs (check model limits)
+            # "top_p": 0.9, # Optional OpenAI parameter
+            # "stream": False, # Set to True if you want streaming responses
         }
 
-        # --- Annotation [services/neural.py: 9] ---
-        # Use httpx.AsyncClient for the async request.
+        # --- Annotation [HF Router Change 5]: Request JSON output if needed (OpenAI format) ---
+        # This standard OpenAI parameter should work if the underlying model/endpoint supports it.
+        if request_json_output:
+             data["response_format"] = {"type": "json_object"}
+             # Crucial: Also keep instructions in the *prompt* itself to return JSON, as model adherence varies.
+
         async with httpx.AsyncClient() as client:
+
             try:
-                # --- Annotation [services/neural.py: 10] ---
-                # Make the asynchronous POST request to the LLM API URL.
-                # Pass the prepared headers and JSON payload. Set a timeout.
+                # --- Annotation [HF Router Change 6]: Make POST request to HF Router URL ---
+                print(f"Sending request to Hugging Face Router API: {self.api_url}")
+                # print(f"Payload: {json.dumps(data, indent=2)}") # Debugging: careful logging keys
+                # print(f"Headers: {self.headers}") # Debugging
+
                 response = await client.post(
-                    self.settings.API_URL,
+                    self.api_url,
                     json=data,
-                    headers=self.headers,
-                    timeout=45.0 # Increased timeout for potentially long LLM responses
+                    headers=self.headers, # Pass headers with Auth
+                    timeout=90.0 # Adjust timeout - HF Router might sometimes be slower than specialized providers
                 )
 
-                # --- Annotation [services/neural.py: 11] ---
-                # Raise an exception for bad status codes (4xx or 5xx).
-                # This provides immediate feedback on API errors.
-                response.raise_for_status()
+                response.raise_for_status() # Check for 4xx/5xx errors
 
-                # --- Annotation [services/neural.py: 12] ---
-                # Parse the JSON response from the API.
                 response_data = response.json()
-                # print(f"LLM Raw Response: {response_data}") # Debugging line
+                # print(f"HF Router Raw Response: {json.dumps(response_data, indent=2)}") # Debugging
 
-                # --- Annotation [services/neural.py: 13] ---
-                # Safely extract the content from the expected response structure.
-                # Check if 'choices' exists and is not empty.
-                if 'choices' in response_data and len(response_data['choices']) > 0:
-                     # Get the first choice's message object.
-                     message = response_data['choices'][0].get('message', {})
-                     # Get the content from the message object.
-                     content = message.get('content')
-                     if content:
-                         # Return the extracted text content.
-                         return content
-                     else:
-                          # Raise error if content is missing within the message.
-                          raise Exception("LLM API Error: No 'content' found in the response message.")
+                # --- Annotation [HF Router Change 7]: Parse OpenAI-compatible response structure ---
+                # This logic remains the same as the response format is standard OpenAI.
+                if "choices" in response_data and len(response_data["choices"]) > 0:
+                    choice = response_data["choices"][0]
+                    finish_reason = choice.get("finish_reason")
+
+                    # Log finish reason for debugging potential issues (e.g., length, content filter)
+                    if finish_reason != "stop" and finish_reason != "eos": # 'eos' is common end-of-sequence token
+                         print(f"Warning: HF Router generation finished unexpectedly. Reason: {finish_reason}")
+                         # Consider how to handle non-stop finishes (e.g., length limit, content filter)
+
+                    if "message" in choice and "content" in choice["message"]:
+                        content = choice["message"]["content"]
+                        if content:
+                             # If JSON was requested, this 'content' should be a valid JSON string
+                             return content.strip() # Strip any leading/trailing whitespace
+                        else:
+                            # Handle potential empty content string if finish_reason wasn't 'stop'
+                            if finish_reason == "length":
+                                print("Warning: Generation stopped due to length limit, content might be incomplete.")
+                                return content # Return potentially incomplete content
+                            elif finish_reason == "content_filter":
+                                raise Exception("HF Router API Error: Content filtered.")
+                            else:
+                                raise Exception(f"HF Router API Error: Empty 'content' in the response message. Finish reason: {finish_reason}")
+                    else:
+                        raise Exception("HF Router API Error: Invalid response structure - 'message' or 'content' missing in choice.")
+                # --- Annotation [HF Router Change 8]: Handle API specific errors (OpenAI format) ---
+                elif "error" in response_data:
+                    error_info = response_data["error"]
+                    err_msg = error_info.get('message', 'Unknown error')
+                    err_type = error_info.get('type', 'N/A')
+                    err_code = error_info.get('code', 'N/A')
+                    raise Exception(f"HF Router API Error: Type: {err_type}, Code: {err_code}, Message: {err_msg}")
                 else:
-                    # Raise error if the 'choices' structure is missing or empty.
-                    raise Exception("LLM API Error: Invalid response structure - 'choices' not found or empty.")
+                    # If no choices and no explicit error, the response is unexpected
+                    raise Exception("HF Router API Error: Invalid response structure - 'choices' not found or empty, and no error field.")
 
-            # --- Annotation [services/neural.py: 14] ---
-            # Catch specific httpx network errors.
             except httpx.RequestError as e:
-                print(f"LLM API Request Error: {e}")
-                # Re-raise as a generic Exception or a custom one for the router to catch.
-                raise Exception(f"Could not connect to LLM API: {e}")
-            # --- Annotation [services/neural.py: 15] ---
-            # Catch HTTP status errors (4xx, 5xx) raised by raise_for_status().
+                print(f"HF Router API Request Error: {e}")
+                url_object = httpx.URL(self.api_url)
+                raise Exception(f"Could not connect to HF Router API at {url_object.host}: {e}") from e
             except httpx.HTTPStatusError as e:
-                 print(f"LLM API HTTP Error: {e.response.status_code} - {e.response.text}")
-                 raise Exception(f"LLM API returned an error: {e.response.status_code}")
-            # --- Annotation [services/neural.py: 16] ---
-            # Catch JSON decoding errors if the API response isn't valid JSON.
+                 print(f"HF Router API HTTP Error: {e.response.status_code} - {e.response.text}")
+                 error_details = "No details provided in response body."
+                 try:
+                     error_data = e.response.json()
+                     if "error" in error_data and "message" in error_data["error"]:
+                         error_details = error_data["error"]["message"]
+                     elif "detail" in error_data: # Some HF errors might use 'detail'
+                         error_details = error_data["detail"]
+                     else:
+                         error_details = e.response.text
+                 except json.JSONDecodeError:
+                     error_details = e.response.text
+                 raise Exception(f"HF Router API returned an error: {e.response.status_code}. Details: {error_details}") from e
             except json.JSONDecodeError as e:
-                print(f"LLM API JSON Decode Error: {e}")
-                raise Exception(f"Failed to parse LLM API response as JSON.")
-            # --- Annotation [services/neural.py: 17] ---
-            # Catch any other unexpected errors during the API call or processing.
+                 print(f"HF Router API JSON Decode Error: {e}")
+                 raw_text = "Could not retrieve raw text"
+                 if 'response' in locals() and hasattr(response, 'text'):
+                     raw_text = response.text
+                 raise Exception(f"Failed to parse HF Router API response as JSON. Raw text: {raw_text}") from e
             except Exception as e:
-                print(f"LLM API Processing Error: {e}")
-                # Re-raise the caught exception.
-                raise e
+                 # Catch the specific exceptions raised above or any other unexpected ones
+                 print(f"HF Router API Processing Error: {e}")
+                 raise e # Re-raise the caught exception
 
-    # --- Annotation [services/neural.py: 18] ---
-    # Method to process ALL answers (combined from stages) to generate the final skills list.
-    # Marked async because it calls the async _call_api method.
-    async def process_answers(self, answers: Dict[str, str]) -> Dict[str, List[str]]:
-        """Generates the final 'hard_skills' list based on all answers."""
-        # --- Annotation [services/neural.py: 19] ---
-        # Combine all questions and answers into a single text block for the LLM.
-        user_text = "\n".join(f"Q: {k}\nA: {v}" for k, v in answers.items())
-        user_text += '\n\n---\nИзвлеки навыки из ответов выше. Предоставь их в формате JSON-объекта: {"hard_skills": "C/C++, HTML, CSS, REST API", "experience": "Я работал в X компании на позиции... Я сопровождал весь проект от создания до выката в прод...", "technologies": "..."}'
+    async def process_answers(self, answers: Dict[str, str]) -> Dict[str, Any]:
+        """Generates structured skills/experience data based on answers using HF Router."""
+        user_text_parts = [f"Q: {k}\nA: {v}" for k, v in answers.items()]
+        user_text = "\n".join(user_text_parts)
 
-        # --- Annotation [services/neural.py: 20] ---
-        # Call the LLM API using the specific system prompt for SKILL EXTRACTION.
-        nn_response_text = await self._call_api(user_text, self.settings.SYSTEM_PROMPT)
+        # --- Annotation [HF Router Change 9]: Ensure prompt clearly requests JSON format ---
+        # This prompt structure remains valid.
+        user_text += '\n\n---\nИзвлеки из приведенных выше ответов на вопросы релевантную информацию о кандидате и верни ее СТРОГО в формате JSON со следующими ключами: {"hard_skills": ["навык1", "навык2", ...], "experience_summary": "Краткое описание опыта...", "technologies": ["технология1", "технология2", ...]}. В ответе должен быть ТОЛЬКО JSON-объект и ничего больше.'
 
-        # --- Annotation [services/neural.py: 21] ---
-        # Basic parsing of the LLM response. Assumes the LLM follows the prompt
-        # and returns a list-like structure, potentially with categories.
-        # More robust parsing might be needed depending on LLM consistency.
-        skills_list = [line.strip() for line in nn_response_text.split('\n') if line.strip() and not line.strip().endswith(':')]
-        # This simple split might need refinement based on actual LLM output format.
+        # --- Annotation [HF Router Change 10]: Call API requesting JSON output ---
+        # Set request_json_output=True
+        nn_response_text = await self._call_api(
+            user_text,
+            self.settings.SYSTEM_PROMPT, # Use the appropriate system prompt from settings
+            request_json_output=True
+        )
+        print(f"HF Router Raw JSON String for Skills: {nn_response_text}") # Log raw response
 
-        # --- Annotation [services/neural.py: 22] ---
-        # Return the result in the desired dictionary format.
-        return {
-            # "experience_summary": "Placeholder for experience summary.", # Add if needed later
-            "hard_skills": skills_list # Return the parsed list of skills
-        }
-
-    # --- Annotation [services/neural.py: 23] ---
-    # Method to generate follow-up questions based on Stage 1 answers.
-    # Marked async because it calls the async _call_api method.
-    async def generate_follow_up_questions(self, answers: Dict[str, str]) -> List[str]:
-        """Generates follow-up questions based on previous answers using the LLM."""
-        user_text = "Предыдущие ответы пользователя:\n" + "\n".join(f"- {k}: {v}" for k, v in answers.items())
-        # Updated instruction consistent with the new prompt
-        user_text += '\n\n---\nСгенерируй 5-7 уточняющих вопросов на основе этих ответов в формате JSON-объекта {"questions": ["вопрос1", "вопрос2", ...]}'
-
-        print("Sending request to LLM for follow-up questions...")
-        raw_response = await self._call_api(user_text, self.settings.FOLLOW_UP_QUESTIONS_PROMPT)
-        print(f"LLM Raw Response for questions: {raw_response}") # Keep logging raw response
-
-        #--- Annotation [services/neural.py: 26] ---
-        # Attempt to parse the LLM response, expecting a JSON array of strings.
         try:
-            # --- Annotation [services/neural.py: 27] ---
-            # Handle cases where the LLM might wrap the JSON in markdown code blocks
-            # AND remove potential trailing artifacts like \boxed{...}
+            # --- Annotation [HF Router Change 11]: Parse the JSON string directly ---
+            # Keep the cleaning logic as models might still occasionally wrap output.
+            cleaned_response = nn_response_text.strip()
+            if cleaned_response.startswith("```json"):
+                 cleaned_response = cleaned_response[7:-3].strip()
+            elif cleaned_response.startswith("```"):
+                 cleaned_response = cleaned_response[3:-3].strip()
+
+            # Handle potential empty string before parsing
+            if not cleaned_response:
+                raise json.JSONDecodeError("Empty string received from API", cleaned_response, 0)
+
+            parsed_data = json.loads(cleaned_response)
+
+            # --- Annotation [HF Router Change 12]: Validate and extract data (same logic) ---
+            # This logic remains the same.
+            hard_skills = parsed_data.get("hard_skills", [])
+            experience = parsed_data.get("experience_summary", "")
+            technologies = parsed_data.get("technologies", [])
+
+            if not isinstance(hard_skills, list):
+                print(f"Warning: 'hard_skills' is not a list in LLM response: {hard_skills}")
+                hard_skills = []
+            if not isinstance(technologies, list):
+                 print(f"Warning: 'technologies' is not a list in LLM response: {technologies}")
+                 technologies = []
+
+            safe_hard_skills = [str(skill) for skill in hard_skills if isinstance(skill, (str, int, float))]
+            safe_technologies = [str(tech) for tech in technologies if isinstance(tech, (str, int, float))]
+
+            return {
+                "hard_skills": safe_hard_skills,
+                "experience_summary": str(experience),
+                "technologies": safe_technologies
+            }
+
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON response for skills: {e}")
+            print(f"LLM Raw response string was:\n{nn_response_text}")
+            # Only print cleaned_response if it was assigned
+            if 'cleaned_response' in locals():
+                print(f"Cleaned string attempted for parsing was:\n{cleaned_response}")
+            raise Exception(f"Failed to parse skills from LLM response (Invalid JSON).") from e
+        except Exception as e:
+             print(f"Error processing skills response: {e}")
+             raise e
+
+
+    async def generate_follow_up_questions(self, answers: Dict[str, str]) -> List[str]:
+        """Generates follow-up questions based on previous answers using HF Router."""
+        user_text = "Предыдущие ответы пользователя:\n" + "\n".join(f"- {k}: {v}" for k, v in answers.items())
+        # --- Annotation [HF Router Change 13]: Update prompt for HF Router, ensure JSON request ---
+        # Prompt structure remains valid.
+        user_text += '\n\n---\nНа основе этих ответов, сгенерируй 5-7 УТОЧНЯЮЩИХ вопросов, чтобы глубже понять опыт и навыки кандидата. Верни результат СТРОГО в формате JSON-объекта: {"questions": ["вопрос1", "вопрос2", ...]}. В ответе должен быть ТОЛЬКО JSON-объект и ничего больше.'
+
+        print("Sending request to HF Router for follow-up questions...")
+        # --- Annotation [HF Router Change 14]: Call API requesting JSON output ---
+        raw_response = await self._call_api(
+            user_text,
+            self.settings.FOLLOW_UP_QUESTIONS_PROMPT, # Use specific prompt if defined
+            request_json_output=True
+        )
+        print(f"HF Router Raw JSON String for questions: {raw_response}") # Log raw response
+
+        try:
+            # --- Annotation [HF Router Change 15]: Clean and parse JSON (same logic) ---
             processed_response = raw_response.strip()
-            if '\\boxed' in processed_response:
-                index = processed_response.find('\\boxed')
-                processed_response = processed_response[index + len('\\boxed'):]
-            # Remove markdown blocks first
             if processed_response.startswith("```json"):
                 processed_response = processed_response[7:-3].strip()
             elif processed_response.startswith("```"):
                  processed_response = processed_response[3:-3].strip()
 
-            # --- NEW: Find the end of the actual JSON data ---
-            # Find the last occurrence of '}' or ']' which likely marks the end
-            # of the primary JSON object or array returned by the LLM.
-            last_brace = processed_response.rfind('}')
-            last_bracket = processed_response.rfind(']')
-            end_json_pos = max(last_brace, last_bracket)
+            print(f"Cleaned response before parsing questions was:\n{processed_response}")
 
-            if end_json_pos != -1:
-                # Truncate the string just after the found brace/bracket
-                processed_response = processed_response[:end_json_pos + 1]
-            else:
-                # If no '}' or ']' is found, the response is likely not valid JSON anyway
-                # Let json.loads handle the error below.
-                print("Warning: No closing brace or bracket found in LLM response for questions.")
+            # Handle potential empty string before parsing
+            if not processed_response:
+                raise json.JSONDecodeError("Empty string received from API", processed_response, 0)
 
-            # Log the cleaned response right before parsing
-            print(f"Cleaned response before parsing was:\n{processed_response}")
-
-            # --- Annotation [services/neural.py: 28] ---
-            # Parse the cleaned string as JSON.
             questions_data = json.loads(processed_response)
 
-            # --- Annotation [services/neural.py: 29] ---
-            # Validate the structure: should be a list of strings OR a dict containing a list.
-            if isinstance(questions_data, list) and all(isinstance(item, str) for item in questions_data):
-                return questions_data
-            # --- Annotation [services/neural.py: 30] ---
-            # Handle alternative structure sometimes returned: {"questions": [...]}.
-            elif isinstance(questions_data, dict) and "questions" in questions_data and isinstance(questions_data["questions"], list):
-                 if all(isinstance(item, str) for item in questions_data["questions"]):
-                     return questions_data["questions"]
-                 else:
-                     raise ValueError("LLM returned a 'questions' list, but it contains non-string items.")
+            # Validation logic remains the same.
+            if isinstance(questions_data, dict) and "questions" in questions_data and isinstance(questions_data["questions"], list):
+                 questions_list = questions_data["questions"]
+                 valid_questions = [str(item) for item in questions_list if isinstance(item, str)]
+                 if len(valid_questions) != len(questions_list):
+                      print("Warning: 'questions' list contained non-string items. They were filtered out.")
+                 if not valid_questions:
+                      print("Warning: 'questions' list extracted, but was empty or contained only non-strings.")
+                 return valid_questions
             else:
-                 # --- Annotation [services/neural.py: 31] ---
-                 print(f"Warning: LLM returned unexpected JSON structure for questions: {questions_data}")
-                 raise ValueError("LLM did not return a valid JSON list/object of strings for questions.")
+                 if isinstance(questions_data, list) and all(isinstance(item, str) for item in questions_data):
+                      print("Warning: LLM returned a list directly instead of {'questions': [...]}. Using the list.")
+                      return questions_data
+                 print(f"Error: HF Router returned unexpected JSON structure for questions: {questions_data}")
+                 raise ValueError("HF Router did not return a valid JSON object with a 'questions' list of strings.")
 
-        # --- Annotation [services/neural.py: 32] ---
-        # Catch JSON decoding errors.
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON response for questions: {e}")
-            # Log the problematic string *again* in case of error
-            print(f"LLM Raw response was:\n{raw_response}")
-            print(f"String attempted for parsing was:\n{processed_response}")
-            raise Exception(f"Failed to parse questions from LLM response (Invalid JSON).")
+            print(f"LLM Raw response string was:\n{raw_response}")
+            # Only print processed_response if it was assigned
+            if 'processed_response' in locals():
+                print(f"String attempted for parsing was:\n{processed_response}")
+            raise Exception(f"Failed to parse questions from HF Router response (Invalid JSON).") from e
+        except Exception as e:
+             print(f"Error processing follow-up questions response: {e}")
+             raise e
 
-    # --- Annotation [services/neural.py: 35] ---
-    # Method to update resume text (currently focused on skills).
-    # Marked async because it calls the async _call_api method.
-    async def update_resume(self, current_text: str, new_info: str) -> Dict[str, str]:
-        """Updates the resume section based on new info (uses skill extraction prompt)."""
-        # --- Annotation [services/neural.py: 36] ---
-        # Combine existing text and new info to provide full context for update.
-        # The prompt should ideally guide the LLM on how to integrate the new info.
-        user_content = f"Текущий раздел:\n{current_text}\n\nДополнительная информация от пользователя:\n{new_info}\n\n---\nПерепиши и обнови раздел, интегрировав новую информацию и сохранив структуру и правила изначального задания (извлечение навыков)."
+    async def update_resume(self, current_text: str, new_info: str) -> Dict[str, Any]: # Возвращаем Any, т.к. структура как у process_answers
+        """Analyzes the combined text and re-extracts structured data."""
+        # Объединяем тексты для анализа LLM
+        combined_text = f"Текущий контекст резюме:\n{current_text}\n\nДополнительные инструкции/информация от пользователя:\n{new_info}"
 
-        # --- Annotation [services/neural.py: 37] ---
-        # Call the LLM API using the main SKILL EXTRACTION prompt, but with context about updating.
-        # Alternatively, you might create a dedicated UPDATE_PROMPT if needed.
-        nn_response = await self._call_api(user_content, self.settings.SYSTEM_PROMPT)
-        # --- Annotation [services/neural.py: 38] ---
-        # Return the updated text. Parsing might be needed here too if structure is expected.
-        return {"updated_hard_skills": nn_response}
+        # Используем тот же промпт, что и для process_answers, чтобы получить ту же структуру
+        user_prompt_instruction = '\n\n---\nПроанализируй весь приведенный выше текст (контекст + инструкции) и верни обновленную информацию о кандидате СТРОГО в формате JSON со следующими ключами: {"hard_skills": ["навык1", ...], "experience_summary": "...", "technologies": [...]}. В ответе должен быть ТОЛЬКО JSON-объект.'
+        full_user_content = combined_text + user_prompt_instruction
+
+        # Запрашиваем JSON и используем SYSTEM_PROMPT
+        nn_response_text = await self._call_api(
+            full_user_content,
+            self.settings.SYSTEM_PROMPT, # Используем промпт для извлечения
+            request_json_output=True # Обязательно требуем JSON
+        )
+        print(f"Raw JSON String for REGENERATED Skills: {nn_response_text}")
+
+        try:
+            # Парсинг и валидация - точно так же, как в process_answers
+            cleaned_response = nn_response_text.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:-3].strip()
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:-3].strip()
+
+            if not cleaned_response:
+                raise json.JSONDecodeError("Empty string received from API", cleaned_response, 0)
+
+            parsed_data = json.loads(cleaned_response)
+
+            hard_skills = parsed_data.get("hard_skills", [])
+            experience = parsed_data.get("experience_summary", "")
+            technologies = parsed_data.get("technologies", [])
+
+            # Basic validation
+            if not isinstance(hard_skills, list): hard_skills = []
+            if not isinstance(technologies, list): technologies = []
+
+            safe_hard_skills = [str(skill) for skill in hard_skills if isinstance(skill, (str, int, float))]
+            safe_technologies = [str(tech) for tech in technologies if isinstance(tech, (str, int, float))]
+
+            # Возвращаем словарь в нужной структуре
+            return {
+                "hard_skills": safe_hard_skills,
+                "experience_summary": str(experience),
+                "technologies": safe_technologies
+            }
+
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON response for REGENERATED skills: {e}")
+            print(f"LLM Raw response string was:\n{nn_response_text}")
+            raise Exception(f"Failed to parse REGENERATED skills from LLM response (Invalid JSON).") from e
+        except Exception as e:
+            print(f"Error processing REGENERATED skills response: {e}")
+            raise e
