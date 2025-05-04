@@ -2,10 +2,11 @@
   <div class="container">
     <component
       :draft="draft"
-      :error="validationError"
+      :error="error"
       :key="draftProgress.step.id"
       :is="draftProgress.step.component"
-      :loading="{ isLoadingQuestions }"
+      :loading="{ isLoadingQuestions, isLoadingLabels }"
+      @regenerate="handleRegenerate"
     ></component>
 
     <ButtonsPrimaryButton
@@ -25,21 +26,30 @@ const {
   nextStep,
   draftProgress,
   stepNumber,
-  validationError,
+  error,
   isLoadingQuestions,
+  regenerateLabels,
+  regeneratePDF,
+  isLoadingLabels,
 } = useDraft();
+
+async function handleRegenerate(new_info: string) {
+  await regenerateLabels(new_info);
+  regeneratePDF();
+}
 
 function nextStepHandle() {
   try {
     nextStep();
-  } catch (error) {
+  } catch (_error: any) {
+    error.value = _error;
     console.warn(error);
   }
 }
 
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {
-    validationError.value = undefined;
+    error.value = undefined;
     await nextTick();
     window.scrollTo({
       top: 0,

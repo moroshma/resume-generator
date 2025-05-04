@@ -2,6 +2,7 @@ import { QuestionsList, ResumeDraftLabels } from "#components";
 import { ValidationError } from "~/utils/errors/ValidationError";
 import { useQA } from "./useQA";
 import { useResume } from "./useResume";
+import { IncorrectlyInputError } from "~/utils/errors/IncorrectlyInputError";
 
 export const useDraft = () => {
   const {
@@ -13,6 +14,8 @@ export const useDraft = () => {
     labels,
     areAllQuestionsAnswered,
     isLoading: isLoadingQuestions,
+    regenerateLabels,
+    isLoadingLabels,
   } = useQA();
 
   const isLoading = computed(() => isLoadingQuestions.value);
@@ -20,7 +23,7 @@ export const useDraft = () => {
 
   const pdfFile = ref<File | undefined>(undefined);
 
-  const validationError = ref<Error | undefined>(undefined);
+  const error = ref<Error | undefined>(undefined);
 
   const steps: IStep[] = [
     { component: QuestionsList, title: "Базовые вопросы", id: 1 },
@@ -99,16 +102,33 @@ export const useDraft = () => {
     }
   );
 
+  watch(draft.value.labels, (newLabels: ILabel[], oldLables: ILabel[]) => {
+    if (oldLables?.length && oldLables.length !== 0) {
+      regeneratePDF();
+    } else {
+      generatePdf("resume", answers.value);
+    }
+  });
+
+  async function regeneratePDF() {
+    pdfFile.value = await generatePdf("resume", {
+      ...answersByStep[1],
+      ...answersByStep[2],
+    });
+  }
+
   async function nextStep() {
     if ([1, 2].includes(stepNumber.value) && !canMoveToNextStep()) {
-      const error = new ValidationError("Заполните ответы на все вопросы.");
-      validationError.value = undefined;
+      const validError = new ValidationError(
+        "Заполните ответы на все вопросы."
+      );
+      error.value = undefined;
       setTimeout(() => {
-        validationError.value = error;
+        error.value = validError;
       }, 50);
-      throw error;
+      throw validError;
     } else {
-      validationError.value = undefined;
+      error.value = undefined;
     }
 
     stepNumber.value = stepNumber.value + 1;
@@ -120,10 +140,12 @@ export const useDraft = () => {
     } else if (stepNumber.value === 3) {
       answers.value = { ...answersByStep[1], ...answersByStep[2] };
       await generateLabels();
-      pdfFile.value = await generatePdf("resume", {
-        ...answersByStep[1],
-        ...answersByStep[2],
-      });
+
+      if (labels.value.length === 0) {
+        const incorrectlyError = new IncorrectlyInputError();
+        error.value = incorrectlyError;
+        throw incorrectlyError;
+      }
     }
   }
 
@@ -134,6 +156,9 @@ export const useDraft = () => {
     nextStep,
     draftProgress,
     stepNumber,
-    validationError,
+    error,
+    regenerateLabels,
+    regeneratePDF,
+    isLoadingLabels,
   };
 };

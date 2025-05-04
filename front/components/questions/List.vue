@@ -102,16 +102,8 @@ watch(hasValidationError, () => {
   }
 }
 
-@keyframes loading-smooth {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.question-card.loading {
+.question-card.loading,
+.label-card.loading {
   background-image: linear-gradient(
     -74deg,
     transparent 25%,
