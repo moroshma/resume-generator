@@ -102,13 +102,21 @@ export const useDraft = () => {
     }
   );
 
-  watch(draft.value.labels, (newLabels: ILabel[], oldLables: ILabel[]) => {
-    if (oldLables?.length && oldLables.length !== 0) {
-      regeneratePDF();
-    } else {
-      generatePdf("resume", answers.value);
+  watch(
+    labels,
+    async (newLabels: ILabel[], oldLables: ILabel[]) => {
+      console.log(newLabels, oldLables);
+
+      if (oldLables?.length && oldLables.length !== 0) {
+        regeneratePDF();
+      } else {
+        pdfFile.value = await generatePdf("resume", answers.value);
+      }
+    },
+    {
+      deep: true,
     }
-  });
+  );
 
   async function regeneratePDF() {
     pdfFile.value = await generatePdf("resume", {

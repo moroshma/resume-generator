@@ -17,9 +17,10 @@ export const useResume = () => {
     return new File([data], name, { type: "application/pdf" });
   };
 
-  const saveResume = async (pdf: File) => {
+  const saveResume = async (pdf: File, name: string) => {
     const data = new FormData();
-    data.append("resume", pdf);
+    const newFile = new File([await pdf.arrayBuffer()], name);
+    data.append("resume", newFile);
 
     const res = await $fetch("api/resume/pdf/create", {
       method: "POST",
