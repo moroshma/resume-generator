@@ -15,6 +15,7 @@ export const useDraft = () => {
     isLoading: isLoadingQuestions,
   } = useQA();
 
+  const isLoading = computed(() => isLoadingQuestions.value);
   const { generatePdf } = useResume();
 
   const pdfFile = ref<File | undefined>(undefined);
@@ -75,6 +76,7 @@ export const useDraft = () => {
   });
 
   const canMoveToNextStep = (): boolean => {
+    if (isLoading.value) return false;
     return areAllQuestionsAnswered();
   };
 
@@ -116,7 +118,7 @@ export const useDraft = () => {
     if (stepNumber.value === 2) {
       answers.value = answersByStep[stepNumber.value - 1];
 
-      getNextQuestions();
+      await getNextQuestions();
     } else if (stepNumber.value === 3) {
       answers.value = { ...answersByStep[1], ...answersByStep[2] };
       await generateLabels();

@@ -3,6 +3,7 @@
     <component
       :draft="draft"
       :error="validationError"
+      :key="draftProgress.step.id"
       :is="draftProgress.step.component"
       :loading="{ isLoadingQuestions }"
     ></component>

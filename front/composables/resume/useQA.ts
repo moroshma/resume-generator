@@ -30,6 +30,7 @@ export const useQA = () => {
   };
 
   const getNextQuestions = async () => {
+    isLoading.value = true;
     try {
       const data: { questions: IQuestion[] } = await $fetch(
         "/api/qa/additional",
