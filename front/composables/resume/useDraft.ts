@@ -1,4 +1,5 @@
 import { QuestionsList, ResumeDraftLabels } from "#components";
+import { ValidationError } from "~/utils/errors/ValidationError";
 import { useQA } from "./useQA";
 import { useResume } from "./useResume";
 
@@ -10,11 +11,14 @@ export const useDraft = () => {
     getNextQuestions,
     answers,
     labels,
+    areAllQuestionsAnswered,
   } = useQA();
 
   const { generatePdf } = useResume();
 
   const pdfFile = ref<File | undefined>(undefined);
+
+  const validationError = ref<Error | undefined>(undefined);
 
   const steps: IStep[] = [
     { component: QuestionsList, title: "Базовые вопросы", id: 1 },
@@ -69,18 +73,43 @@ export const useDraft = () => {
     };
   });
 
+  const canMoveToNextStep = (): boolean => {
+    return areAllQuestionsAnswered();
+  };
+
   watch(questions, (newV, oldV) => {
     questionsByStep[stepNumber.value] = newV;
   });
 
-  watch(stepNumber, (newVal, oldVal) => {
-    answersByStep[oldVal] = { ...answers.value };
-    allAnswers.value = { ...answers.value };
-    questionsByStep[stepNumber.value] = questions.value;
-  });
+  watch(
+    draft,
+    (newV, oldV) => {
+      if (stepNumber.value === 1) {
+        answers.value = newV.answersToBasicQuestions;
+      } else if (stepNumber.value === 2) {
+        answers.value = newV.answersToGeneratedQuestions;
+      }
+      allAnswers.value = { ...answers.value };
+    },
+    {
+      deep: true,
+    }
+  );
 
   async function nextStep() {
+    if ([1, 2].includes(stepNumber.value) && !canMoveToNextStep()) {
+      const error = new ValidationError("Заполните ответы на все вопросы.");
+      validationError.value = undefined;
+      setTimeout(() => {
+        validationError.value = error;
+      }, 50);
+      throw error;
+    } else {
+      validationError.value = undefined;
+    }
+
     stepNumber.value = stepNumber.value + 1;
+
     if (stepNumber.value === 2) {
       answers.value = answersByStep[stepNumber.value - 1];
 
@@ -101,5 +130,6 @@ export const useDraft = () => {
     nextStep,
     draftProgress,
     stepNumber,
+    validationError,
   };
 };

@@ -5,6 +5,19 @@ export const useQA = () => {
 
   const isLoading = ref(false);
 
+  const areAllQuestionsAnswered = (): boolean => {
+    for (let i = 0; i < questions.value.length; i++) {
+      const question = questions.value[i];
+      const answer = answers.value[question];
+
+      if (!answer || !String(answer).trim()) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const initBasicQuestions = async () => {
     const data: any = await $fetch("/api/qa/basic");
     questions.value = data.questions;
@@ -17,7 +30,7 @@ export const useQA = () => {
     });
 
     questions.value = data.questions;
-    console.log("fetch end");
+    answers.value = {};
   };
 
   const generateLabels = async () => {
@@ -36,5 +49,6 @@ export const useQA = () => {
     initBasicQuestions,
     getNextQuestions,
     generateLabels,
+    areAllQuestionsAnswered,
   };
 };

@@ -47,7 +47,7 @@
 <script setup lang="ts">
 import { useResume } from "~/composables/resume/useResume";
 
-const props = defineProps<{ draft: IDraft }>();
+const props = defineProps<{ draft: IDraft; error: Error | undefined }>();
 
 const { saveResume } = useResume();
 

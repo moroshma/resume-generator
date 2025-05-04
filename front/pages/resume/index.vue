@@ -1,11 +1,15 @@
 <template>
   <div class="container">
-    <component :draft="draft" :is="currentComponent"></component>
+    <component
+      :draft="draft"
+      :error="validationError"
+      :is="currentComponent"
+    ></component>
 
     <ButtonsPrimaryButton
       v-if="draftProgress.totalSteps > stepNumber"
       text="Продолжить"
-      @click="nextStep"
+      @click="nextStepHandle"
       style="align-self: center; margin-top: 20px"
     />
   </div>
@@ -13,12 +17,20 @@
 <script setup>
 import { useDraft } from "~/composables/resume/useDraft";
 
-const { draft, nextStep, draftProgress, stepNumber } = useDraft();
+const { draft, nextStep, draftProgress, stepNumber, validationError } =
+  useDraft();
 
 const currentComponent = computed(() => draft.value.step.component);
 
+async function nextStepHandle() {
+  try {
+    await nextStep();
+  } catch (error) {}
+}
+
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {
+    validationError.value = undefined;
     await nextTick();
     window.scrollTo({
       top: 0,
