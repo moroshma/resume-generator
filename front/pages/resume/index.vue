@@ -2,8 +2,11 @@
   <div class="container">
     <component
       :draft="draft"
-      :error="validationError"
-      :is="currentComponent"
+      :error="error"
+      :key="draftProgress.step.id"
+      :is="draftProgress.step.component"
+      :loading="{ isLoadingQuestions, isLoadingLabels }"
+      @regenerate="handleRegenerate"
     ></component>
 
     <ButtonsPrimaryButton
@@ -14,23 +17,39 @@
     />
   </div>
 </template>
-<script setup>
+
+<script setup lang="ts">
 import { useDraft } from "~/composables/resume/useDraft";
 
-const { draft, nextStep, draftProgress, stepNumber, validationError } =
-  useDraft();
+const {
+  draft,
+  nextStep,
+  draftProgress,
+  stepNumber,
+  error,
+  isLoadingQuestions,
+  regenerateLabels,
+  regeneratePDF,
+  isLoadingLabels,
+} = useDraft();
 
-const currentComponent = computed(() => draft.value.step.component);
+async function handleRegenerate(new_info: string) {
+  await regenerateLabels(new_info);
+  regeneratePDF();
+}
 
-async function nextStepHandle() {
+function nextStepHandle() {
   try {
-    await nextStep();
-  } catch (error) {}
+    nextStep();
+  } catch (_error: any) {
+    error.value = _error;
+    console.warn(error);
+  }
 }
 
 watch(stepNumber, async (newVal, oldVal) => {
   if (newVal !== oldVal) {
-    validationError.value = undefined;
+    error.value = undefined;
     await nextTick();
     window.scrollTo({
       top: 0,

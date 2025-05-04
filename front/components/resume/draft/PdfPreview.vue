@@ -10,7 +10,7 @@
       />
     </div>
     <div v-else-if="pdfUrl" class="preview-area">
-      <iframe :src="pdfUrl" type="application/pdf" width="100%" height="600px">
+      <iframe :src="pdfUrl" type="application/pdf" width="100%" height="1000px">
         <p>
           Ваш браузер не поддерживает отображение PDF.
           <a :href="pdfUrl" target="_blank" download="resume_preview.pdf"
@@ -24,10 +24,6 @@
           :loading="isSaving"
           @click="emit('save')"
         />
-        <!-- Optional: Button to go back and edit labels -->
-        <button class="secondary-btn" @click="emit('backToLabels')">
-          Вернуться к редактированию
-        </button>
       </div>
     </div>
     <div v-else class="loading-state">PDF еще не сгенерирован.</div>
@@ -57,7 +53,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .pdf-preview-container {
-  padding: 1rem 0;
+  width: 100%;
 }
 .preview-area {
   border: 1px solid #e2e8f0;

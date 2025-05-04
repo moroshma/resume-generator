@@ -16,7 +16,9 @@
       </div>
 
       <div class="meta">
-        <div class="date">{{ resume.created_at }}</div>
+        <div class="date">
+          {{ formatIsoDateTimeReadable(resume.created_at) }}
+        </div>
       </div>
 
       <div class="actions">
@@ -65,8 +67,7 @@ const props = defineProps<{
 const emit = defineEmits<{ exportResume: number[]; deleteResume: number[] }>();
 
 const isHovered = ref(false);
-//d1242d
-//17837b
+
 const cardStyle = computed(() => ({
   "--card-color": props.resume.resume_id % 2 == 0 ? "#d1242d" : "#17837b",
   transform: isHovered.value
@@ -80,6 +81,24 @@ function handleExport(id: number) {
 
 function handleDelete(id: number) {
   emit("deleteResume", id);
+}
+
+function formatIsoDateTimeReadable(isoString: string) {
+  const date = new Date(isoString);
+
+  if (isNaN(date.getTime())) {
+    console.error("Ошибка: Не удалось распознать строку как дату:", isoString);
+    return "Неверная дата";
+  }
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
 }
 </script>
 

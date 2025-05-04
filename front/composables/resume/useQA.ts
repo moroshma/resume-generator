@@ -4,6 +4,7 @@ export const useQA = () => {
   const labels = ref<ILabel[]>([]);
 
   const isLoading = ref(false);
+  const isLoadingLabels = ref(false);
 
   const areAllQuestionsAnswered = (): boolean => {
     for (let i = 0; i < questions.value.length; i++) {
@@ -19,39 +20,76 @@ export const useQA = () => {
   };
 
   const initBasicQuestions = async () => {
-    const data: { questions: IQuestion[] } = await $fetch("/api/qa/basic");
-    questions.value = data.questions;
+    isLoading.value = true;
+    try {
+      const data: { questions: IQuestion[] } = await $fetch("/api/qa/basic");
+      questions.value = data.questions;
+    } catch (error) {
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   const getNextQuestions = async () => {
-    const data: { questions: IQuestion[] } = await $fetch(
-      "/api/qa/additional",
-      {
-        method: "POST",
-        body: { answers: answers.value },
-      }
-    );
+    isLoading.value = true;
+    try {
+      const data: { questions: IQuestion[] } = await $fetch(
+        "/api/qa/additional",
+        {
+          method: "POST",
+          body: { answers: answers.value },
+        }
+      );
 
-    questions.value = data.questions;
-    answers.value = {};
+      questions.value = data.questions;
+      answers.value = {};
+    } catch (error) {
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   const generateLabels = async () => {
-    const data: ILabel[] = await $fetch("api/labels/generate", {
-      method: "POST",
-      body: { answers: answers.value },
-    });
+    isLoadingLabels.value = true;
+    try {
+      const data: ILabel[] = await $fetch("api/labels/generate", {
+        method: "POST",
+        body: { answers: answers.value },
+      });
 
-    labels.value = data;
+      labels.value = data;
+    } catch (error) {
+    } finally {
+      isLoadingLabels.value = false;
+    }
+  };
+
+  const regenerateLabels = async (new_info: string) => {
+    isLoadingLabels.value = true;
+
+    try {
+      const data: ILabel[] = await $fetch("/api/labels/regenerate", {
+        method: "POST",
+        body: { current_data: labels.value, new_info },
+      });
+
+      labels.value = data;
+    } catch (error) {
+    } finally {
+      isLoadingLabels.value = false;
+    }
   };
 
   return {
     questions,
     answers,
     labels,
+    isLoading,
+    isLoadingLabels,
     initBasicQuestions,
     getNextQuestions,
     generateLabels,
     areAllQuestionsAnswered,
+    regenerateLabels,
   };
 };

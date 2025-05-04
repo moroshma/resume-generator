@@ -1,5 +1,13 @@
 <script setup lang="ts">
-const props = defineProps<{ draft: IDraft; error: Error | undefined }>();
+const props = defineProps<{
+  draft: IDraft;
+  error: Error | undefined;
+  loading: ILoading;
+}>();
+
+const isLoadingQuestions = computed(() => props.loading.isLoadingQuestions);
+
+const loadingCardCount = 5;
 
 const hasValidationError = computed(
   () => props.error?.name == "ValidationError"
@@ -54,7 +62,15 @@ watch(hasValidationError, () => {
 
 <template>
   <div class="questions-container">
+    <div class="questions-container" v-if="isLoadingQuestions">
+      <div
+        style="height: 250px"
+        class="question-card loading"
+        v-for="index in loadingCardCount"
+      ></div>
+    </div>
     <div
+      v-else
       ref="questionsRef"
       v-for="question in questions"
       :key="question"
@@ -86,6 +102,25 @@ watch(hasValidationError, () => {
   }
 }
 
+.question-card.loading,
+.label-card.loading {
+  background-image: linear-gradient(
+    -74deg,
+    transparent 25%,
+    var(--main-green) 50%,
+    transparent 75%
+  );
+
+  background-size: 200% 100%;
+
+  animation: loading-smooth 2s linear infinite;
+
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  height: 250px;
+}
+
 .question-card.not-valid {
   animation: shake 0.4s ease-in-out v-bind(countAnime);
 
@@ -100,6 +135,7 @@ watch(hasValidationError, () => {
   display: flex;
   flex-direction: column;
   gap: 50px;
+  gap: 2rem;
 }
 
 .question-card {
@@ -112,6 +148,5 @@ watch(hasValidationError, () => {
 .question-title {
   color: #2d3748;
   font-size: 1.5rem;
-  margin-bottom: 2rem;
 }
 </style>
