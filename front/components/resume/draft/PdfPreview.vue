@@ -57,7 +57,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .pdf-preview-container {
-  padding: 1rem 0;
+  width: 100%;
 }
 .preview-area {
   border: 1px solid #e2e8f0;
