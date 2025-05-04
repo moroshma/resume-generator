@@ -13,7 +13,8 @@ from ai_service.schemas.resume_1 import (
     UserAnswers,
     UpdateRequest,
     QuestionsResponse,
-    ResumePdfRequest
+    ResumePdfRequest,
+    LabelValueItem
     # Removed GeneratedSkillsResponse, UpdatedSkillsResponse as we'll redefine/rename below
 )
 
@@ -83,11 +84,10 @@ async def get_next_questions(user_answers: UserAnswers = Body(...)):
 
 
 # Use the actual NeuralService to process all answers and generate resume data
-@router.post("/api/v001/resume/label/generate", response_model=GeneratedResumeDataResponse)
+@router.post("/api/v001/resume/label/generate", response_model=List[LabelValueItem])
 async def generate_resume_final(user_answers: UserAnswers = Body(...)):
     """
-    Processes all user answers to generate structured resume data (skills, summary, technologies).
-    Requires authentication (JWT - implied, handle elsewhere).
+    Processes all user answers to generate structured resume data as a list of label/value pairs.
     """
     if not user_answers.answers:
          raise HTTPException(
@@ -96,40 +96,46 @@ async def generate_resume_final(user_answers: UserAnswers = Body(...)):
         )
 
     try:
-        # Call the service method to process all answers using the Gemini API
-        result = await neural_service.process_answers(user_answers.answers)
-        # The service method returns a dict matching GeneratedResumeDataResponse
-        return result
+        # neural_service.process_answers returns List[Dict[str, Any]]
+        # FastAPI will validate if each item in the returned list matches LabelValueItem
+        structured_data = await neural_service.process_answers(user_answers.answers)
+        return structured_data
     except Exception as e:
         print(f"Error in /api/v001/resume/label/generate endpoint: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate resume data. Error: {str(e)}",
-            # detail=f"Failed to generate resume data. Error: {type(e).__name__}: {str(e)}"
         )
+
+
 
 
 # Use the actual NeuralService to update/regenerate a section
-@router.post("/api/v001/resume/label/regenerate", response_model=GeneratedResumeDataResponse)
+@router.post("/api/v001/resume/label/regenerate", response_model=List[LabelValueItem])
 async def update_resume_section(update_req: UpdateRequest = Body(...)):
     """
-    Updates resume data based on current text and new info, returning re-extracted structured data.
-    Requires authentication (JWT - implied, handle elsewhere).
+    Updates resume data based on current structured data and new info,
+    returning the complete, updated list of label/value pairs.
     """
-    if not update_req.current_text and not update_req.new_info:
+    # Input validation based on the corrected UpdateRequest schema
+    if not update_req.current_data and not update_req.new_info:
          raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either current_text or new_info must be provided for regeneration.",
-        )
+            detail="Either current_data or new_info must be provided for regeneration.",
+         )
+    # You might add more specific validation if needed (e.g., new_info cannot be empty if current_data is)
 
     try:
-        # Метод update_resume теперь возвращает структуру как у process_answers
-        result = await neural_service.update_resume(
-            update_req.current_text,
-            update_req.new_info
+        # Pass the data matching the service method's signature
+        # update_resume expects: current_data: List[Dict[str, Any]], new_info: str
+        updated_structured_data = await neural_service.update_resume(
+            # Pydantic automatically converts update_req.current_data (List[LabelValueItem])
+            # to List[Dict] when passing it, which matches the expected type hint.
+            current_data=update_req.current_data,
+            new_info=update_req.new_info
         )
-        # FastAPI автоматически проверит соответствие result схеме GeneratedResumeDataResponse
-        return result
+        # FastAPI validates the returned list against List[LabelValueItem]
+        return updated_structured_data
     except Exception as e:
         print(f"Error in /api/v001/resume/label/regenerate endpoint: {e}")
         raise HTTPException(
