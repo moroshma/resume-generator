@@ -58,7 +58,7 @@
       </div>
       <div class="pdf">
         <ResumeDraftPdfPreview
-          :isLoading="false"
+          :isLoading="Boolean(loading.isLoadingLabels)"
           :error="null"
           :isSaving="false"
           :pdfFile="props.draft.pdf"
