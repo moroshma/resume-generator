@@ -116,13 +116,11 @@ const { saveResume } = useResume();
 async function openSaveModal() {
   if (!props.draft.pdf) {
     console.error("Резюме еще не сгенерировалось");
-    // Optionally show a user-friendly error message here
     return;
   }
-  resumeName.value = ""; // Clear previous name
+  resumeName.value = "";
   isModalVisible.value = true;
-  // Focus the input field when the modal opens
-  await nextTick(); // Wait for the DOM to update
+  await nextTick();
   resumeNameInput.value?.focus();
 }
 
@@ -134,26 +132,21 @@ async function confirmSave() {
   if (!props.draft.pdf) {
     console.error("PDF data missing during confirmSave");
     closeModal();
-    return; // Should not happen if openSaveModal checks, but good practice
+    return;
   }
   const nameToSave = resumeName.value.trim();
   if (!nameToSave) {
-    // Maybe add visual feedback to the input field
     console.warn("Resume name cannot be empty");
-    resumeNameInput.value?.focus(); // Keep focus on input
-    return; // Don't close modal, don't save
+    resumeNameInput.value?.focus();
+    return;
   }
 
   try {
-    // Call the updated saveResume function with the name
     await saveResume(props.draft.pdf, nameToSave);
-    // Optionally: Show a success message
-    console.log(`Resume "${nameToSave}" saved successfully.`);
   } catch (error) {
     console.error("Failed to save resume:", error);
-    // Optionally: Show an error message to the user within the modal or after closing
   } finally {
-    closeModal(); // Close modal after attempting to save
+    closeModal();
   }
 }
 
@@ -176,28 +169,28 @@ const restartProcess = async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Ensure it's on top */
+  z-index: 1000;
   padding: 1rem;
 }
 
 .modal-content {
-  background-color: #ffffff; /* Or your desired background color */
+  background-color: #ffffff;
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   width: 100%;
-  max-width: 450px; /* Adjust max-width as needed */
+  max-width: 450px;
   display: flex;
   flex-direction: column;
-  gap: 1rem; /* Spacing between elements */
+  gap: 1rem;
 }
 
 .modal-title {
-  color: #0f172a; /* Match your theme */
+  color: #0f172a;
   font-size: 1.4rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
@@ -205,7 +198,7 @@ const restartProcess = async () => {
 }
 
 .modal-prompt {
-  color: #334155; /* Match your theme */
+  color: #334155;
   font-size: 1rem;
   margin-bottom: 1rem;
   text-align: center;
@@ -214,16 +207,16 @@ const restartProcess = async () => {
 .modal-input {
   max-width: 100%;
   padding: 0.8rem 1rem;
-  border: 2px solid #e2e8f0; /* Match your theme's border color */
+  border: 2px solid #e2e8f0;
   border-radius: 8px;
   font-size: 1rem;
-  color: #334155; /* Match your theme */
+  color: #334155;
 }
 
 .modal-input:focus {
   outline: none;
-  border-color: var(--main-green, #17837b); /* Use your theme color */
-  box-shadow: 0 0 0 3px rgba(23, 131, 123, 0.2); /* Adjust color/opacity */
+  border-color: var(--main-green, #17837b);
+  box-shadow: 0 0 0 3px rgba(23, 131, 123, 0.2);
 }
 
 .modal-actions {
@@ -244,19 +237,16 @@ const restartProcess = async () => {
 }
 
 .modal-button.save {
-  background-color: var(--main-green, #17837b); /* Use your theme color */
+  background-color: var(--main-green, #17837b);
   color: white;
 }
 
 .modal-button.save:hover {
-  background-color: var(
-    --main-green-dark,
-    #11665f
-  ); /* Darker shade for hover */
+  background-color: var(--main-green-dark, #11665f);
 }
 
 .modal-button.save:disabled {
-  background-color: #e2e8f0; /* Disabled style */
+  background-color: #e2e8f0;
   color: #a0aec0;
   cursor: not-allowed;
   opacity: 0.7;
@@ -264,12 +254,12 @@ const restartProcess = async () => {
 
 .modal-button.cancel {
   background-color: transparent;
-  color: #718096; /* Match your theme's secondary text color */
-  border: 2px solid #e2e8f0; /* Match your theme's border color */
+  color: #718096;
+  border: 2px solid #e2e8f0;
 }
 
 .modal-button.cancel:hover {
-  background-color: #f8fafc; /* Slight background on hover */
+  background-color: #f8fafc;
   border-color: #cbd5e1;
 }
 .question-card.loading,
