@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   draft: IDraft;
-  error: Error | undefined;
+  error: Error | undefined | any;
   loading: ILoading;
 }>();
 
@@ -12,6 +12,11 @@ const loadingCardCount = 5;
 const hasValidationError = computed(
   () => props.error?.name == "ValidationError"
 );
+const serverError = computed(
+  () => !!props.error?.response?.status && props.error.response.status >= 500
+);
+console.log(serverError, "serverError");
+
 const countAnime = computed(() => (firstNotValidquestion.value <= 5 ? 4 : 2));
 
 const questionsRef = ref<HTMLElement[]>();
@@ -62,7 +67,14 @@ watch(hasValidationError, () => {
 
 <template>
   <div class="questions-container">
-    <div class="questions-container" v-if="isLoadingQuestions">
+    <div v-if="serverError" class="server-error-card" role="alert">
+      <h3 class="error-title">Ошибка сервера</h3>
+      <p>
+        Не удалось загрузить вопросы. Пожалуйста, попробуйте обновить страницу
+        позже или свяжитесь с поддержкой.
+      </p>
+    </div>
+    <div class="questions-container" v-else-if="isLoadingQuestions">
       <div
         style="height: 250px"
         class="question-card loading"
@@ -100,6 +112,29 @@ watch(hasValidationError, () => {
   100% {
     transform: rotate(0deg);
   }
+}
+
+.server-error-card {
+  background-color: rgba(209, 36, 45, 0.05);
+  border: 1px solid var(--main-red);
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+  color: var(--main-red);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+}
+
+.server-error-card .error-title {
+  color: var(--main-red);
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.server-error-card p {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #c81e26;
 }
 
 .question-card.loading,

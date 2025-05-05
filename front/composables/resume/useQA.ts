@@ -44,6 +44,7 @@ export const useQA = () => {
       questions.value = data.questions;
       answers.value = {};
     } catch (error) {
+      throw error;
     } finally {
       isLoading.value = false;
     }
