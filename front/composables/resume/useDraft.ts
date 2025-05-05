@@ -110,7 +110,7 @@ export const useDraft = () => {
       if (oldLables?.length && oldLables.length !== 0) {
         regeneratePDF();
       } else {
-        pdfFile.value = await generatePdf("resume", answers.value);
+        pdfFile.value = await generatePdf("resume", labels.value);
       }
     },
     {
@@ -119,10 +119,7 @@ export const useDraft = () => {
   );
 
   async function regeneratePDF() {
-    pdfFile.value = await generatePdf("resume", {
-      ...answersByStep[1],
-      ...answersByStep[2],
-    });
+    pdfFile.value = await generatePdf("resume", labels.value);
   }
 
   async function nextStep() {
