@@ -147,8 +147,10 @@ services:
   ai-service:
     image: qwikman/ai-service:main # Используй конкретный тег или sha
     environment:
+      - API_URL=https://router.huggingface.co/novita/v3/openai/chat/completions
       - AUTH_SERVICE_URL=http://user-service:8080/api/v001/auth/check
-      - OPENROUTER_API_KEY=/run/secrets/gpt_token
+      - API_KEY=/run/secrets/gpt_token
+      - MODEL_ID=deepseek/deepseek-v3-0324
     secrets:
       - gpt_token
     networks:
