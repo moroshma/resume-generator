@@ -92,9 +92,32 @@ class NeuralService:
                 raise Exception(f"Could not connect to HF Router API at {self.api_url}: {e}") from e
             except httpx.HTTPStatusError as e:
                  print(f"HF Router API HTTP Error: {e.response.status_code} - {e.response.text}")
-                 error_details = e.response.text
-                 try: error_details = e.response.json().get("error", {}).get("message", error_details)
-                 except json.JSONDecodeError: pass
+                 error_details = e.response.text # Default to raw text
+                 try:
+                     # Attempt to parse the JSON response body
+                     error_data = e.response.json()
+                     # Check if it's a dictionary and has an 'error' key
+                     if isinstance(error_data, dict) and "error" in error_data:
+                         extracted_error = error_data["error"]
+                         if isinstance(extracted_error, dict) and "message" in extracted_error:
+                             # Handle nested structure like OpenAI { "error": { "message": "...", ... } }
+                             error_details = extracted_error["message"]
+                         elif isinstance(extracted_error, str):
+                             # Handle simple structure like { "error": "Error message string" } (THIS IS OUR CASE)
+                             error_details = extracted_error
+                         else:
+                             # Fallback if the 'error' value is neither dict nor string
+                             error_details = str(extracted_error)
+                 except json.JSONDecodeError:
+                     # If JSON parsing fails, error_details remains the raw text
+                     print("Warning: Could not parse HF Router error response as JSON.")
+                     pass
+                 except Exception as parse_err:
+                     # Catch other potential errors during error parsing
+                     print(f"Warning: Error processing HF Router error response details: {parse_err}")
+                     pass # Keep raw text as error_details
+
+                 # Raise the exception with the best available details
                  raise Exception(f"HF Router API returned an error: {e.response.status_code}. Details: {error_details}") from e
             except json.JSONDecodeError as e:
                  print(f"HF Router API JSON Decode Error: {e}")

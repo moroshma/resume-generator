@@ -1,7 +1,7 @@
 # ai_service/services/pdf_generator.py
 import os
 from fpdf import FPDF
-from typing import Dict, List, Any, Tuple # Добавим Tuple
+from typing import Dict, List, Any, Tuple
 import datetime
 import re
 import logging
@@ -21,6 +21,10 @@ HEADER_FIELDS = { # Ключевые слова для поиска полей �
     "phone": ["телефон", "phone", "номер телефона", "contact number"]
 }
 HEADER_SEPARATOR = " | " # Разделитель для контактной информации
+LABEL_LINE_COLOR = (180, 180, 180) # Цвет линии под лейблом (светло-серый)
+LABEL_LINE_WIDTH = 0.2 # Толщина линии под лейблом
+LABEL_LINE_OFFSET_Y = 0.5 # Небольшой отступ линии от текста лейбла (в мм)
+SPACE_AFTER_LINE = 1.5 # Отступ после линии перед текстом значения (в мм)
 
 # --- Font Paths (Keep as is) ---
 DEJAVU_FONT_PATH_DIR = "/usr/share/fonts/truetype/dejavu/"
@@ -71,57 +75,47 @@ class PDFResumeGenerator:
     def _set_font_bold(self, size=FONT_SIZE_LABEL):
         self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, size)
 
-    # Удаляем _add_section_heading, т.к. секции теперь не нужны в старом виде
-    # def _add_section_heading(self, title: str): ...
-
-    # Оставляем _add_text_block, но, возможно, он будет меньше использоваться
     def _add_text_block(self, text: str, size=FONT_SIZE_VALUE, style=FONT_STYLE_NORMAL):
         try:
             log.debug(f"Adding text block: '{text[:100]}...' at y={self.pdf.get_y()}, x={self.pdf.get_x()}")
             self.pdf.set_font(FONT_FAMILY, style, size)
-            available_width = self.pdf.epw # Используем эффективную ширину страницы
+            available_width = self.pdf.epw
             log.debug(f"Available width for multi_cell: {available_width:.2f}mm")
-            self.pdf.multi_cell(0, size * LINE_HEIGHT_MULTIPLIER, text) # Используем размер шрифта для высоты строки
-            self.pdf.ln(size * LINE_HEIGHT_MULTIPLIER * 0.3) # Небольшой отступ после блока
+            self.pdf.multi_cell(0, size * LINE_HEIGHT_MULTIPLIER, text)
+            self.pdf.ln(size * LINE_HEIGHT_MULTIPLIER * 0.3)
         except Exception as e:
             log.error(f"Error adding text block: {e}. Text was: '{text}'", exc_info=True)
             raise
 
-    # _add_list_items тоже не нужен в старом виде
-    # def _add_list_items(self, items: List[str]): ...
-
-    # Удаляем _find_answer, он больше не нужен
-    # def _find_answer(self, user_answers: Dict[str, str], keywords: List[str]) -> str | None: ...
-
-
     def _extract_header_data(self, resume_data: List[Dict[str, str]]) -> Tuple[Dict[str, str], List[Dict[str, str]]]:
-        """
-        Извлекает данные для шапки (ФИО, Почта, Телефон) из общего списка
-        и возвращает их отдельно от остальных данных.
-        """
         header_info = {"name": "N/A", "email": "N/A", "phone": "N/A"}
         other_data = []
-        found_header_labels = set() # Чтобы не добавлять дубликаты по разным ключевым словам
+        found_header_labels = set()
 
         for item in resume_data:
-            label_lower = item.get("label", "").lower()
+            label_lower = item.get("label", "").strip().lower()
             value = item.get("value", "")
             found = False
 
-            # Проверяем, относится ли лейбл к полям шапки
-            for field_key, keywords in HEADER_FIELDS.items():
-                if label_lower in keywords and label_lower not in found_header_labels:
-                    header_info[field_key] = value
-                    found_header_labels.add(label_lower) # Помечаем, что этот лейбл обработан
-                    found = True
-                    log.debug(f"Found header field '{field_key}' with label '{item.get('label')}'")
-                    break # Переходим к следующему item
+            if label_lower:
+                for field_key, keywords in HEADER_FIELDS.items():
+                    if label_lower in keywords and label_lower not in found_header_labels:
+                        header_info[field_key] = value
+                        found_header_labels.add(label_lower)
+                        found = True
+                        log.debug(f"Found header field '{field_key}' with label '{item.get('label')}'")
+                        break
 
-            # Если это не поле шапки, добавляем в список остальных данных
             if not found:
-                other_data.append(item)
+                if item.get("label") and item.get("value"):
+                    other_data.append(item)
+                else:
+                    log.warning(f"Skipping item due to missing label or value: {item}")
+
 
         log.info(f"Extracted header: {header_info}")
+        other_data = [item for item in other_data if item.get("label") and item.get("value")]
+        log.info(f"Remaining data items for main content: {len(other_data)}")
         return header_info, other_data
 
 
@@ -133,9 +127,20 @@ class PDFResumeGenerator:
             log.info("Starting PDF generation with structured data...")
             if not resume_data:
                 log.warning("Input resume_data is empty. Generating empty PDF.")
-                self._add_text_block("Нет данных для генерации резюме.", style=FONT_STYLE_BOLD)
-                # Вывод пустого PDF, чтобы не было ошибки
-                return self.pdf.output()
+                # Ensure returning bytes even for empty PDF
+                pdf_output_raw = self.pdf.output(dest='S')
+                if isinstance(pdf_output_raw, bytearray):
+                    return bytes(pdf_output_raw)
+                elif isinstance(pdf_output_raw, str):
+                    return pdf_output_raw.encode('latin-1')
+                elif isinstance(pdf_output_raw, bytes):
+                    return pdf_output_raw
+                else: # Fallback just in case
+                     log.error(f"Unexpected type {type(pdf_output_raw)} for empty PDF output.")
+                     self._add_text_block("Нет данных для генерации резюме.", style=FONT_STYLE_BOLD)
+                     pdf_output_raw = self.pdf.output(dest='S') # Try again after adding text
+                     return bytes(pdf_output_raw) if isinstance(pdf_output_raw, bytearray) else pdf_output_raw.encode('latin-1')
+
 
             # --- 1. Extract Header Data ---
             header_info, other_data = self._extract_header_data(resume_data)
@@ -146,10 +151,9 @@ class PDFResumeGenerator:
             # --- 2. Render Header ---
             log.debug(f"Rendering Name: '{name[:50]}...'")
             self.pdf.set_font(FONT_FAMILY, FONT_STYLE_BOLD, FONT_SIZE_NAME)
-            self.pdf.cell(0, FONT_SIZE_NAME * LINE_HEIGHT_MULTIPLIER * 0.8, name, ln=1, align='C') # Уменьшил высоту строки для имени
-            self.pdf.ln(self.line_height * 0.2) # Небольшой отступ после имени
+            self.pdf.multi_cell(0, FONT_SIZE_NAME * LINE_HEIGHT_MULTIPLIER * 0.8, name, align='C', new_x="LMARGIN", new_y="NEXT")
+            self.pdf.ln(self.line_height * 0.2)
 
-            # Собираем контактную строку
             contact_parts = []
             if email and email != "N/A" and email != "Почта не указана":
                 contact_parts.append(f"{email}")
@@ -160,26 +164,29 @@ class PDFResumeGenerator:
             if contact_string:
                 log.debug(f"Rendering Contact: '{contact_string[:100]}...'")
                 self.pdf.set_font(FONT_FAMILY, FONT_STYLE_NORMAL, FONT_SIZE_CONTACT)
-                self.pdf.cell(0, FONT_SIZE_CONTACT * LINE_HEIGHT_MULTIPLIER, contact_string, ln=1, align='C')
-                self.pdf.ln(self.line_height * 1.5) # Увеличиваем отступ после контактов
+                self.pdf.multi_cell(0, FONT_SIZE_CONTACT * LINE_HEIGHT_MULTIPLIER, contact_string, align='C', new_x="LMARGIN", new_y="NEXT")
+                self.pdf.ln(self.line_height * 1.5)
             else:
                  log.debug("No contact info (email/phone) found to render.")
-                 self.pdf.ln(self.line_height) # Отступ даже если контактов нет
+                 self.pdf.ln(self.line_height)
 
             # --- 3. Render Main Content (Label-Value Pairs) ---
             log.debug(f"Rendering {len(other_data)} label-value items...")
-            effective_page_width = self.pdf.epw # Calculate once
+            effective_page_width = self.pdf.epw
             log.debug(f"Using effective page width (epw): {effective_page_width:.2f}mm for content.")
 
             for i, item in enumerate(other_data):
-                label = item.get("label", "Нет лейбла")
-                value = str(item.get("value", "Нет значения")) # Ensure value is a string
+                label = item.get("label", "Нет лейбла").strip()
+                value = str(item.get("value", "Нет значения")).strip()
+
+                if not label or not value:
+                     log.warning(f"Skipping item {i+1} due to empty label or value after stripping: Label='{label}', Value='{value}'")
+                     continue
 
                 log.debug(f"Rendering item {i+1}: Label='{label}', Value='{value[:50]}...'")
 
-                # Add spacing before the item
                 if i > 0:
-                    self.pdf.ln(self.line_height * 0.6)
+                    self.pdf.ln(self.line_height * 0.5)
 
                 current_y_before_label = self.pdf.get_y()
                 log.debug(f"Before Label '{label}': y={current_y_before_label:.2f}")
@@ -187,69 +194,97 @@ class PDFResumeGenerator:
                 # Render Label (Bold)
                 self._set_font_bold(size=FONT_SIZE_LABEL)
                 label_height = FONT_SIZE_LABEL * LINE_HEIGHT_MULTIPLIER
-                self.pdf.set_x(self.pdf.l_margin) # Ensure starting at left margin
+                self.pdf.set_x(self.pdf.l_margin)
 
-                # Use explicit width (epw) for label multi_cell
                 if effective_page_width <= 0:
                      log.error(f"EPW is non-positive ({effective_page_width:.2f})! Cannot render label '{label}'.")
-                     continue # Skip this item
+                     continue
+
                 self.pdf.multi_cell(effective_page_width, label_height, f"{label}:", new_x="LMARGIN", new_y="NEXT")
-                # No need for extra ln after multi_cell with new_y="NEXT"
 
-                current_y_after_label = self.pdf.get_y()
-                log.debug(f"After Label '{label}': y={current_y_after_label:.2f}")
+                current_y_after_label_text = self.pdf.get_y()
+                log.debug(f"After Label Text '{label}': y={current_y_after_label_text:.2f}")
 
+                # --- Add Decorative Line Under Label ---
+                line_y = current_y_after_label_text - label_height * 0.3 + LABEL_LINE_OFFSET_Y
+                if line_y < current_y_before_label + FONT_SIZE_LABEL * 0.5:
+                    line_y = current_y_after_label_text - 1.0
+                line_y = max(line_y, self.pdf.t_margin)
+
+                log.debug(f"Drawing decorative line for '{label}' at y={line_y:.2f} (from {self.pdf.l_margin} to {self.pdf.w - self.pdf.r_margin})")
+                self.pdf.set_draw_color(*LABEL_LINE_COLOR)
+                self.pdf.set_line_width(LABEL_LINE_WIDTH)
+                self.pdf.line(self.pdf.l_margin, line_y, self.pdf.w - self.pdf.r_margin, line_y)
+                self.pdf.set_draw_color(0, 0, 0)
+                self.pdf.set_line_width(0.2) # Reset to fpdf default line width
+
+                self.pdf.ln(SPACE_AFTER_LINE)
+                # --- End Decorative Line ---
+
+
+                current_y_before_value = self.pdf.get_y()
+                log.debug(f"After Line & Spacing, Before Value: y={current_y_before_value:.2f}")
 
                 # Render Value (Normal)
                 self._set_font_normal(size=FONT_SIZE_VALUE)
                 value_height = FONT_SIZE_VALUE * LINE_HEIGHT_MULTIPLIER
-                self.pdf.set_x(self.pdf.l_margin) # Ensure starting at left margin
+                self.pdf.set_x(self.pdf.l_margin)
 
-                # Use explicit width (epw) instead of 0 for value multi_cell
                 log.debug(f"Before Value multi_cell: x={self.pdf.get_x():.2f}, y={self.pdf.get_y():.2f}, width={effective_page_width:.2f}, height={value_height:.2f}")
                 if effective_page_width <= 0:
                      log.error(f"EPW is non-positive ({effective_page_width:.2f})! Cannot render value for label '{label}'.")
-                     continue # Skip this item
+                     continue
 
-                # Add a small check for the first character width if possible (for debugging)
-                if value:
-                    try:
-                        first_char_width = self.pdf.get_string_width(value[0])
-                        log.debug(f"Width of first char '{value[0]}': {first_char_width:.2f}mm")
-                        if first_char_width > effective_page_width:
-                             log.warning(f"First character '{value[0]}' width ({first_char_width:.2f}mm) exceeds effective page width ({effective_page_width:.2f}mm)! This might cause issues.")
-                    except Exception as e:
-                        log.warning(f"Could not get width of first char: {e}")
+                # Debugging check (keep if useful)
+                # if value:
+                #     try:
+                #         first_char_width = self.pdf.get_string_width(value[0])
+                #         log.debug(f"Width of first char '{value[0]}': {first_char_width:.2f}mm")
+                #         if first_char_width > effective_page_width:
+                #              log.warning(f"First character '{value[0]}' width ({first_char_width:.2f}mm) exceeds effective page width ({effective_page_width:.2f}mm)! This might cause issues.")
+                #     except Exception as e:
+                #         log.warning(f"Could not get width of first char: {e}")
 
 
-                # Use multi_cell with explicit width
                 self.pdf.multi_cell(effective_page_width, value_height, value, new_x="LMARGIN", new_y="NEXT")
-                # No need for extra ln after multi_cell with new_y="NEXT"
 
                 current_y_after_value = self.pdf.get_y()
                 log.debug(f"After Value: y={current_y_after_value:.2f}")
 
             # --- 4. Output ---
             log.info("PDF generation complete, preparing output.")
-            # Get the raw output from fpdf2 (likely bytearray or bytes)
             pdf_output_raw = self.pdf.output(dest='S')
+            # Log the actual type returned for easier debugging in the future
             log.debug(f"Type returned by self.pdf.output(dest='S'): {type(pdf_output_raw)}")
 
-            # Ensure the final result is specifically a 'bytes' object
-            if isinstance(pdf_output_raw, bytearray):
-                pdf_output_bytes = bytes(pdf_output_raw)
-                log.debug("Converted bytearray to bytes.")
-            elif isinstance(pdf_output_raw, bytes):
-                 pdf_output_bytes = pdf_output_raw # Already the desired type
-                 log.debug("Output was already bytes.")
+            pdf_output_bytes = None # Initialize
+            if isinstance(pdf_output_raw, bytes):
+                pdf_output_bytes = pdf_output_raw
+                log.debug("self.pdf.output(dest='S') returned bytes.")
+            # ***** ADDED CHECK FOR BYTEARRAY *****
+            elif isinstance(pdf_output_raw, bytearray):
+                pdf_output_bytes = bytes(pdf_output_raw) # Convert bytearray to bytes
+                log.debug("self.pdf.output(dest='S') returned bytearray, converted to bytes.")
+            # ***** END ADDED CHECK *****
+            elif isinstance(pdf_output_raw, str):
+                log.warning("self.pdf.output(dest='S') returned str, encoding to latin-1.")
+                try:
+                    pdf_output_bytes = pdf_output_raw.encode('latin-1')
+                except Exception as enc_err:
+                    log.error(f"Failed to encode PDF output string to latin-1: {enc_err}", exc_info=True)
+                    # Raising a more specific error might be better, but TypeError is okay here
+                    raise TypeError("Failed to get PDF content as bytes") from enc_err
             else:
-                 # Handle unexpected type if necessary, though unlikely now
-                 error_msg = f"FPDF output(dest='S') returned unexpected type: {type(pdf_output_raw)}. Expected bytes or bytearray."
+                 # This block now correctly handles unexpected types that are NOT bytes, bytearray, or str
+                 error_msg = f"FPDF output(dest='S') returned unexpected type: {type(pdf_output_raw)}. Expected bytes, bytearray, or str."
                  log.error(error_msg)
                  raise TypeError(error_msg)
 
+
+            # Final check before returning
             if not isinstance(pdf_output_bytes, bytes):
-                 error_msg = f"FPDF output encoding failed. Expected bytes, got {type(pdf_output_bytes)}."
+                 # This should technically not be reachable if the logic above is correct, but serves as a safeguard
+                 error_msg = f"PDF generation result is not bytes after processing. Got {type(pdf_output_bytes)}."
                  log.error(error_msg)
                  raise TypeError(error_msg)
 
@@ -262,7 +297,6 @@ class PDFResumeGenerator:
 
 
 # --- Function to call from router (обновленная) ---
-# Принимает List[Dict[str, str]], который должен быть подготовлен в роутере
 def create_resume_pdf(resume_data: List[Dict[str, str]]) -> bytes:
     """
     Creates a resume PDF from a list of label-value dictionaries.
@@ -280,15 +314,25 @@ def create_resume_pdf(resume_data: List[Dict[str, str]]) -> bytes:
     if not isinstance(resume_data, list):
         log.error(f"Invalid input type for create_resume_pdf: expected list, got {type(resume_data)}")
         raise TypeError("Input data must be a list of dictionaries.")
-    # Можно добавить проверку, что элементы списка - это dict с нужными ключами, если нужно
+
+    # Basic validation of list items (optional but good practice)
+    # for i, item in enumerate(resume_data):
+    #     if not isinstance(item, dict) or "label" not in item or "value" not in item:
+    #          log.error(f"Invalid item format at index {i}: {item}. Expected dict with 'label' and 'value'.")
+    #          # Decide whether to raise error or filter/skip
+    #          # raise ValueError(f"Invalid item format at index {i}")
+    #          log.warning(f"Skipping invalid item at index {i}.")
 
     try:
         generator = PDFResumeGenerator()
         pdf_content = generator.generate(resume_data)
 
+        # The generate function now ensures it returns bytes or raises an error
+        # So this check might seem redundant, but it's a good final assertion
         if not isinstance(pdf_content, bytes):
-            error_msg = f"CRITICAL Error: PDF generator was expected to return bytes, but returned {type(pdf_content)}."
+            error_msg = f"CRITICAL Error: PDF generator returned non-bytes type: {type(pdf_content)}."
             log.error(error_msg)
+            # Attempt recovery only if absolutely necessary and possible (unlikely here)
             raise TypeError(error_msg)
 
         log.info("PDF content generated and validated (type: bytes).")
@@ -296,4 +340,4 @@ def create_resume_pdf(resume_data: List[Dict[str, str]]) -> bytes:
 
     except Exception as e:
          log.error(f"Error in create_resume_pdf function: {e}", exc_info=True)
-         raise # Перевыбрасываем для обработки FastAPI
+         raise # Re-raise for FastAPI/caller to handle
