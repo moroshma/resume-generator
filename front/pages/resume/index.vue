@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import { useDraft } from "~/composables/resume/useDraft";
+import { FetchError } from "ofetch";
 
 const {
   draft,
@@ -38,12 +39,13 @@ async function handleRegenerate(new_info: string) {
   regeneratePDF();
 }
 
-function nextStepHandle() {
+async function nextStepHandle() {
+  if (error.value?.name === "FetchError") return;
   try {
-    nextStep();
+    await nextStep();
   } catch (_error: any) {
+    console.dir(_error);
     error.value = _error;
-    console.warn(error);
   }
 }
 

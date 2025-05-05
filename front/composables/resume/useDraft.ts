@@ -105,8 +105,6 @@ export const useDraft = () => {
   watch(
     labels,
     async (newLabels: ILabel[], oldLables: ILabel[]) => {
-      console.log(newLabels, oldLables);
-
       if (oldLables?.length && oldLables.length !== 0) {
         regeneratePDF();
       } else {

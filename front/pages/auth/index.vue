@@ -38,7 +38,6 @@ const auth = async (userAuthData) => {
       navigateTo("/home");
     }
   } catch (error) {
-    console.log(error.status, "err");
     if (error.status === 401) {
       errorMessage.value = "Неверно введен логин или пароль.";
     } else if (error.status === 409) {
