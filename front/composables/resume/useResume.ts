@@ -1,13 +1,12 @@
 export const useResume = () => {
   const generatePdf = async (
-    name = "resume2",
-    answers: Record<string, string>
+    name = "resume",
+    labels: ILabel[]
   ): Promise<File> => {
     const data = await $fetch<Blob>("/api/resume/pdf/generate", {
       method: "POST",
       body: {
-        answers,
-        generated_skills: ["Python"],
+        resume_data: labels,
       },
       responseType: "blob",
     });
