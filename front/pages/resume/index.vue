@@ -10,9 +10,16 @@
     ></component>
 
     <ButtonsPrimaryButton
-      v-if="draftProgress.totalSteps > stepNumber"
+      v-if="draftProgress.totalSteps > stepNumber && !fetchError"
       text="Продолжить"
       @click="nextStepHandle"
+      style="align-self: center; margin-top: 20px"
+    />
+
+    <ButtonsPrimaryButton
+      v-if="fetchError"
+      text="Вернуться обратно"
+      @click="navigateTo('/home')"
       style="align-self: center; margin-top: 20px"
     />
   </div>
@@ -20,7 +27,6 @@
 
 <script setup lang="ts">
 import { useDraft } from "~/composables/resume/useDraft";
-import { FetchError } from "ofetch";
 
 const {
   draft,
@@ -39,13 +45,17 @@ async function handleRegenerate(new_info: string) {
   regeneratePDF();
 }
 
+const fetchError = ref(undefined);
+
 async function nextStepHandle() {
-  if (error.value?.name === "FetchError") return;
   try {
     await nextStep();
   } catch (_error: any) {
     console.dir(_error);
     error.value = _error;
+    if (error.value?.name === "FetchError") {
+      fetchError.value = _error;
+    }
   }
 }
 
