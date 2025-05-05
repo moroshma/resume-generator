@@ -15,7 +15,6 @@ const hasValidationError = computed(
 const serverError = computed(
   () => !!props.error?.response?.status && props.error.response.status >= 500
 );
-console.log(serverError, "serverError");
 
 const countAnime = computed(() => (firstNotValidquestion.value <= 5 ? 4 : 2));
 
