@@ -189,9 +189,10 @@ async def update_resume_section(update_req: UpdateRequest = Body(...)):
 @router.post("/api/v001/resume/pdf/generate")
 async def generate_resume_pdf(request: Request, request_data: ResumeDataPdfRequest = Body(...)):
     """
-    Генерирует PDF резюме, предварительно получая ФИО, Email, Телефон
-    из user_service и добавляя их к предоставленным данным. Требует
-    пересылки аутентификационных данных (заголовков/cookie) в user_service.
+    Генерирует PDF резюме. Пытается получить ФИО, Email, Телефон
+    из user_service и добавить их к предоставленным данным. Если получить
+    данные пользователя не удалось, генерирует PDF с пустой шапкой профиля.
+    Требует пересылки аутентификационных данных (заголовков/cookie) в user_service.
     """
     if not request_data.resume_data:
          raise HTTPException(
@@ -199,96 +200,105 @@ async def generate_resume_pdf(request: Request, request_data: ResumeDataPdfReque
             detail="AI-generated resume data cannot be empty for PDF generation.",
         )
 
-    # --- 1. Получение данных пользователя ---
-    profile_data_items: List[Dict[str, str]] = []
+    # --- 1. Инициализация данных профиля с пустыми значениями по умолчанию ---
+    profile_data_items: List[Dict[str, str]] = [
+        {"label": "Full Name", "value": ""},
+        {"label": "Email", "value": ""},
+        {"label": "Phone", "value": ""}
+    ]
+    log.info("Initialized profile data with empty defaults. Attempting to fetch from user_service.")
+
+    # --- 2. Попытка получения данных пользователя ---
     try:
         # --- Подготовка заголовков и Cookies для user_service ---
         headers_to_forward = {}
-        cookies_to_forward_dict = {} # Словарь для сбора cookies
+        cookies_to_forward_dict = {}
 
-        # 1.1 Пересылка заголовка Authorization (если используется)
+        # 2.1 Пересылка заголовка Authorization
         auth_header = request.headers.get("Authorization")
         if auth_header:
             headers_to_forward["Authorization"] = auth_header
             log.debug("Forwarding Authorization header.")
 
-        # 1.2 Пересылка НЕОБХОДИМЫХ Cookies
-        # Извлекаем 'Refresh-Token' cookie из входящего запроса
-        refresh_token_value = request.cookies.get("Refresh-Token") # <-- Имя из ошибки 401
+        # 2.2 Пересылка НЕОБХОДИМЫХ Cookies (например, Refresh-Token)
+        refresh_token_value = request.cookies.get("Refresh-Token")
         if refresh_token_value:
             cookies_to_forward_dict["Refresh-Token"] = refresh_token_value
             log.debug("Found 'Refresh-Token' cookie to forward.")
         else:
-            # Важно: если user-service СТРОГО требует этот cookie,
-            # а он не пришел от клиента, то запрос к user-service все равно упадет с 401.
-            # Можно добавить проверку и выдать ошибку раньше, если токен обязателен.
-            log.warning("Incoming request did not contain 'Refresh-Token' cookie.")
-            # raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing required Refresh-Token cookie in the request.")
+            log.warning("Incoming request did not contain 'Refresh-Token' cookie. User service request might fail if required.")
 
+        # Добавьте другие необходимые cookies сюда, если нужно
 
-        # Добавь сюда другие cookies, если user-service требует их
-        # access_token_value = request.cookies.get("Access-Token")
-        # if access_token_value:
-        #     cookies_to_forward_dict["Access-Token"] = access_token_value
-        #     log.debug("Found 'Access-Token' cookie to forward.")
-
-        # Формируем заголовок 'Cookie' для httpx, если есть что пересылать
+        # Формируем заголовок 'Cookie' для httpx
         if cookies_to_forward_dict:
             cookie_header_string = "; ".join([f"{name}={value}" for name, value in cookies_to_forward_dict.items()])
             headers_to_forward["Cookie"] = cookie_header_string
             log.debug(f"Constructed Cookie header: {cookie_header_string}")
         # --- Конец подготовки заголовков ---
 
-
-        # Убедись, что URL правильный (должен взяться из env переменной после перезапуска)
         user_service_target_url = settings.USER_SERVICE_URL
         log.info(f"Attempting to fetch user info from user_service at: {user_service_target_url}")
 
+        # --- Вызов user_service ---
         user_info = await _get_user_info(user_service_target_url, headers=headers_to_forward)
 
-        # --- 2. Форматирование данных пользователя --- (остается без изменений)
+        # --- 2.1 Успех: Форматирование полученных данных ---
         full_name_parts = [user_info.get("name"), user_info.get("surname")]
         full_name = " ".join(filter(None, full_name_parts))
 
+        # ПЕРЕЗАПИСЫВАЕМ profile_data_items с реальными данными
         profile_data_items = [
             {"label": "Full Name", "value": full_name or ""},
             {"label": "Email", "value": user_info.get("email", "") or ""},
             {"label": "Phone", "value": user_info.get("phone_number", "") or ""}
         ]
-        log.info(f"Successfully formatted user profile data: {profile_data_items}")
+        log.info(f"Successfully fetched and formatted user profile data: {profile_data_items}")
 
     except HTTPException as http_exc:
-         log.error(f"Failed to get user info, cannot generate PDF header: {http_exc.detail}")
-         # Если ошибка пришла из _get_user_info (например, 401 от user-service),
-         # то статус код уже будет правильным (401 или другой)
-         # Мы поднимаем ее дальше, чтобы FastAPI вернул клиенту соответствующий ответ.
-         # Если user-service вернул 401, то клиенту вернется 401 (или 503 если так обработано в _get_user_info)
-         raise http_exc
-    except Exception as e:
-         log.error(f"Unexpected error processing user info: {e}", exc_info=True)
-         raise HTTPException(
-             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-             detail="An internal error occurred while processing user profile information."
+         # Ошибка при запросе к user_service (напр., 401, 503). Логируем, но НЕ ПРЕРЫВАЕМ генерацию PDF.
+         # Используются profile_data_items с пустыми значениями, заданные по умолчанию.
+         log.warning(
+             f"Could not fetch user info from user_service (HTTPException: {http_exc.status_code} - {http_exc.detail}). "
+             f"Proceeding with PDF generation using an empty profile header."
          )
+         # Не делаем raise http_exc
+    except Exception as e:
+         # Любая другая неожиданная ошибка при получении данных пользователя. Логируем, но НЕ ПРЕРЫВАЕМ.
+         # Используются profile_data_items с пустыми значениями, заданные по умолчанию.
+         log.error(
+             f"Unexpected error while trying to fetch user info: {e}. "
+             f"Proceeding with PDF generation using an empty profile header.",
+             exc_info=True # Добавляем traceback в лог
+         )
+         # Не делаем raise
 
-    # --- 3. Объединение данных --- (остается без изменений)
+    # --- Выполнение продолжается здесь НЕЗАВИСИМО от успеха получения данных пользователя ---
+
+    # --- 3. Объединение данных (профиль + AI) ---
     try:
+        # Используем profile_data_items (либо с данными пользователя, либо пустые по умолчанию)
         ai_generated_data = [item.model_dump() if hasattr(item, 'model_dump') else item.dict()
                              for item in request_data.resume_data]
         full_resume_data = profile_data_items + ai_generated_data
         log.debug(f"Combined data for PDF generation (first 3 items): {full_resume_data[:3]}")
 
-        # --- 4. Генерация PDF --- (остается без изменений)
+        # --- 4. Генерация PDF ---
         log.info("Calling PDF generation service with combined data.")
+        # Функция create_resume_pdf уже должна уметь обрабатывать пустые строки в profile_data_items
         pdf_bytes = create_resume_pdf(full_resume_data)
 
         if not isinstance(pdf_bytes, bytes):
-             log.error(f"create_resume_pdf returned unexpected type: {type(pdf_bytes)}")
-             raise TypeError(f"create_resume_pdf returned unexpected type: {type(pdf_bytes)}")
+             log.error(f"create_resume_pdf returned unexpected type: {type(pdf_bytes)}. Expected bytes.")
+             # Эта ошибка критична для генерации, поэтому здесь вызываем HTTPException
+             raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error: PDF generation service returned invalid data type."
+             )
 
-        # --- 5. Формирование ответа --- (остается без изменений)
+        # --- 5. Формирование ответа ---
         filename = f"resume_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        log.info(f"Successfully generated PDF: {filename}")
+        log.info(f"Successfully generated PDF: {filename} (User info fetch status logged previously)")
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -296,11 +306,14 @@ async def generate_resume_pdf(request: Request, request_data: ResumeDataPdfReque
         )
 
     except HTTPException as http_exc:
-        raise http_exc
+        # Перехватываем HTTPException, которые могли возникнуть на шагах 3, 4, 5
+        log.error(f"HTTP error during PDF processing/generation: {http_exc.detail}")
+        raise http_exc # Пробрасываем дальше
     except Exception as e:
-        log.error(f"Error in PDF generation step: {e}", exc_info=True)
-        traceback.print_exc()
+        # Обработка ошибок, возникших ПОСЛЕ получения данных пользователя (на шагах 3, 4, 5)
+        log.error(f"Error in PDF generation or data combination step: {e}", exc_info=True)
+        traceback.print_exc() # Вывод traceback в консоль/логи для отладки
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate resume PDF. Internal error: {str(e)}",
+            detail=f"Failed to generate resume PDF after processing user info. Internal error: {str(e)}",
         )
