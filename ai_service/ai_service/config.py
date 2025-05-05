@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     # "http://auth-service/api/v001/user/auth/check".
     # For local testing outside Docker, it might be "http://localhost:PORT/...".
     AUTH_SERVICE_URL: str = os.getenv("AUTH_SERVICE_URL", "http://localhost:8081/api/v001/user/auth/check") # Example default
+    USER_SERVICE_URL: str = "http://user-service:8080/api/v001/users/info"
 
     # --- Annotation [config.py: 6] ---
     # System prompt for the LLM when extracting skills from user answers.
