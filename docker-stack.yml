@@ -260,7 +260,7 @@ services:
       - postgres-resume-service
       - minio-resume-service
     deploy:
-      replicas: 1 # Или 1
+      replicas: 3 # Или 1
       update_config:
         parallelism: 1
         delay: 10s
