@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	serviceName := "resume-storage" // Замените на имя вашего сервиса
-	networkName := "overlay"        // Замените на имя overlay-сети
+	serviceName := "resumeapp_resume-storage" // Замените на имя вашего сервиса
+	networkName := "resumeapp_internal"       // Замените на имя overlay-сети
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
