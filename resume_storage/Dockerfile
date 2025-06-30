@@ -22,3 +22,4 @@ COPY --from=builder /app/config ./config
 
 
 CMD ["./main"]
+

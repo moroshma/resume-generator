@@ -46,3 +46,4 @@ app.include_router(resume_1.router)
 async def read_root():
     """ Basic endpoint to check if the service is running. """
     return {"message": f"Welcome to {settings.APP_TITLE}"}
+

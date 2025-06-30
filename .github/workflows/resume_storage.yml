@@ -46,7 +46,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3 # Исправлено: добавлено uses:
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
         if: steps.changes.outputs.src == 'true' && github.event_name != 'pull_request'
@@ -73,7 +73,7 @@ jobs:
         with:
           context: ${{ env.SERVICE_PATH }}
           file: ${{ env.SERVICE_PATH }}/Dockerfile
-          platforms: linux/amd64 # <- Только amd64
+          platforms: linux/amd64,linux/arm64 # Добавлена поддержка arm64 для Mac с Apple Silicon
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

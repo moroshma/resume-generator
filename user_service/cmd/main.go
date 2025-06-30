@@ -12,4 +12,5 @@ import "github.com/moroshma/resume-generator/user_service/internal/app"
 // @externalDocs.url          https://swagger.io/resources/open-api/
 func main() {
 	app.Run()
+
 }
