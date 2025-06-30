@@ -1,37 +1,66 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"os"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/client"
 )
 
 func main() {
+	serviceName := "resume-storage" // Замените на имя вашего сервиса
+	networkName := "overlay"        // Замените на имя overlay-сети
 
-	//app.Run()
-
-	ips, err := net.LookupHost("resume-storage")
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
-	fmt.Printf("replicas: %v\n", ips)
+	// Получаем ID сервиса по имени
+	serviceFilter := filters.NewArgs(filters.Arg("name", serviceName))
+	services, err := cli.ServiceList(ctx, types.ServiceListOptions{Filters: serviceFilter})
+	if err != nil || len(services) == 0 {
+		fmt.Printf("Service %s not found\n", serviceName)
+		os.Exit(1)
+	}
+	serviceID := services[0].ID
 
-	addrs, err := net.InterfaceAddrs()
+	// Получаем задачи сервиса
+	taskFilter := filters.NewArgs(filters.Arg("service", serviceID))
+	tasks, err := cli.TaskList(ctx, types.TaskListOptions{Filters: taskFilter})
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
-	for _, addr := range addrs {
-		fmt.Printf("Address: %s\n", addr.String())
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil {
-				fmt.Printf("IP: %s\n", ipNet.IP.String())
+	// Собираем IP-адреса
+	var ips []string
+	for _, task := range tasks {
+		if task.Status.State != swarm.TaskStateRunning {
+			continue
+		}
+
+		for _, attachment := range task.NetworksAttachments {
+			if attachment.Network.Spec.Name != networkName {
+				continue
+			}
+
+			for _, addr := range attachment.Addresses {
+				ip, _, err := net.ParseCIDR(addr)
+				if err == nil {
+					ips = append(ips, ip.String())
+				}
 			}
 		}
 	}
-	for {
 
+	fmt.Printf("Service '%s' replica IPs in network '%s':\n", serviceName, networkName)
+	for _, ip := range ips {
+		fmt.Println("-", ip)
 	}
 }
