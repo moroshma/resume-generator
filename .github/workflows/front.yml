@@ -70,7 +70,7 @@ jobs:
           context: ${{ env.SERVICE_PATH }}
           file: ${{ env.SERVICE_PATH }}/Dockerfile
           target: prod # Убедись, что target prod актуален
-          platforms: linux/amd64 # <- Только amd64
+          platforms: linux/amd64,linux/arm64 # Добавлена поддержка arm64 для Mac с Apple Silicon
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
