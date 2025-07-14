@@ -1,21 +1,16 @@
-# --- START OF FILE workflows/resume_storage.yml ---
 name: Build and Push resume-storage
 
 on:
   push:
     branches: [ "main", "master" ]
     tags: [ 'v*.*.*' ]
-    # paths:
-    #  - 'resume_storage/**'
   pull_request:
     branches: [ "main", "master" ]
-    # paths:
-    #  - 'resume_storage/**'
 
 env:
   SERVICE_NAME: resume-storage
   DOCKER_HUB_REPO: qwikman/resume-storage
-  SERVICE_PATH: ./resume_storage # Путь к директории сервиса
+  SERVICE_PATH: ./resume_storage
 
 jobs:
   build-and-push:
@@ -26,9 +21,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Используем v4
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Необходимо для paths-filter при push
+          fetch-depth: 0
 
       - name: Check for changes in service directory
         id: changes
@@ -37,16 +32,12 @@ jobs:
           filters: |
             src:
               - '${{ env.SERVICE_PATH }}/**'
-              # Можно добавить другие файлы, если их изменение требует пересборки resume-storage
-              # Например:
-              # - 'go.mod'
-              # - 'go.sum'
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3 # Исправлено: добавлено uses:
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
         if: steps.changes.outputs.src == 'true' && github.event_name != 'pull_request'
@@ -73,7 +64,7 @@ jobs:
         with:
           context: ${{ env.SERVICE_PATH }}
           file: ${{ env.SERVICE_PATH }}/Dockerfile
-          platforms: linux/amd64 # <- Только amd64
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -83,4 +74,3 @@ jobs:
       - name: Notify build skipped
         if: steps.changes.outputs.src == 'false'
         run: echo "No changes detected in ${{ env.SERVICE_PATH }} (or related files), build skipped."
-# --- END OF FILE workflows/resume_storage.yml ---

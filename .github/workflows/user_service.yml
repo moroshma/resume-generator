@@ -1,21 +1,16 @@
-# --- START OF FILE workflows/user_service.yml ---
 name: Build and Push User Service
 
 on:
   push:
     branches: [ "main", "master" ]
     tags: [ 'v*.*.*' ]
-    # paths: # paths-filter handles this logic within the job now
-    #  - 'user_service/**'
   pull_request:
     branches: [ "main", "master" ]
-    # paths:
-    #  - 'user_service/**'
 
 env:
   SERVICE_NAME: user-service
   DOCKER_HUB_REPO: qwikman/user-service
-  SERVICE_PATH: ./user_service # Путь к директории сервиса
+  SERVICE_PATH: ./user_service
 
 jobs:
   build-and-push:
@@ -26,9 +21,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Используем v4
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Необходимо для paths-filter при push
+          fetch-depth: 0
 
       - name: Check for changes in service directory
         id: changes
@@ -39,15 +34,12 @@ jobs:
               - '${{ env.SERVICE_PATH }}/**'
 
       - name: Set up QEMU
-        # Запускаем всегда, т.к. быстро
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        # Запускаем всегда, т.к. быстро
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        # Логинимся только если есть изменения И это не PR
         if: steps.changes.outputs.src == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
@@ -56,7 +48,6 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        # Получаем метаданные всегда (или добавить if, если не нужны при скипе)
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.DOCKER_HUB_REPO }}
@@ -68,13 +59,12 @@ jobs:
             type=sha,format=short
 
       - name: Build and push Docker image
-        # Собираем и пушим только если были изменения
         if: steps.changes.outputs.src == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ${{ env.SERVICE_PATH }}
           file: ${{ env.SERVICE_PATH }}/Dockerfile
-          platforms: linux/amd64 # <- Только amd64
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -84,4 +74,3 @@ jobs:
       - name: Notify build skipped
         if: steps.changes.outputs.src == 'false'
         run: echo "No changes detected in ${{ env.SERVICE_PATH }}, build skipped."
-# --- END OF FILE workflows/user_service.yml ---
