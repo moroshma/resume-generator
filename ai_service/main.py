@@ -19,3 +19,4 @@ app.include_router(resume_1.router)
 @app.get("/")
 async def read_root():
     return {"message": f"Welcome to {settings.APP_TITLE}"}
+
