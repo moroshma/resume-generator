@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    # paths:
-    #  - 'mkdocs/**'  # Можно временно убрать ограничение для тестирования
 
 jobs:
   deploy:

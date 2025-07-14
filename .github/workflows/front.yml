@@ -1,21 +1,16 @@
-# --- START OF FILE workflows/front.yml ---
 name: Build and Push Frontend
 
 on:
   push:
     branches: [ "main", "master" ]
     tags: [ 'v*.*.*' ]
-    # paths:
-    #  - 'front/**'
   pull_request:
     branches: [ "main", "master" ]
-    # paths:
-    #  - 'front/**'
 
 env:
   SERVICE_NAME: front
   DOCKER_HUB_REPO: qwikman/resume-front
-  SERVICE_PATH: ./front # Путь к директории сервиса
+  SERVICE_PATH: ./front
 
 jobs:
   build-and-push:
@@ -26,9 +21,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Используем v4
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Необходимо для paths-filter при push
+          fetch-depth: 0
 
       - name: Check for changes in service directory
         id: changes
@@ -69,8 +64,8 @@ jobs:
         with:
           context: ${{ env.SERVICE_PATH }}
           file: ${{ env.SERVICE_PATH }}/Dockerfile
-          target: prod # Убедись, что target prod актуален
-          platforms: linux/amd64,linux/arm64 # Добавлена поддержка arm64 для Mac с Apple Silicon
+          target: prod
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -80,4 +75,3 @@ jobs:
       - name: Notify build skipped
         if: steps.changes.outputs.src == 'false'
         run: echo "No changes detected in ${{ env.SERVICE_PATH }}, build skipped."
-# --- END OF FILE workflows/front.yml ---

@@ -1,16 +1,11 @@
-# --- START OF FILE workflows/ai_service.yml ---
 name: Build and Push AI Service
 
 on:
   push:
     branches: [ "main", "master" ]
     tags: [ 'v*.*.*' ]
-    # paths:
-    #  - 'ai_service/**'
   pull_request:
     branches: [ "main", "master" ]
-    # paths:
-    #  - 'ai_service/**'
 
 env:
   SERVICE_NAME: ai-service
@@ -26,9 +21,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Используем v4
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Необходимо для paths-filter при push
+          fetch-depth: 0
 
       - name: Check for changes in service directory
         id: changes
@@ -69,7 +64,7 @@ jobs:
         with:
           context: ${{ env.SERVICE_PATH }}
           file: ${{ env.SERVICE_PATH }}/Dockerfile
-          platforms: linux/amd64,linux/arm64 # Добавлена поддержка arm64 для Mac с Apple Silicon
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -79,4 +74,3 @@ jobs:
       - name: Notify build skipped
         if: steps.changes.outputs.src == 'false'
         run: echo "No changes detected in ${{ env.SERVICE_PATH }}, build skipped."
-# --- END OF FILE workflows/ai_service.yml ---

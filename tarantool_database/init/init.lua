@@ -9,9 +9,7 @@ require('log').info("I am a test app!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 local utils = require('utils.utils')
 local json = require('json')
 
--- Создаем спейсы для хранения данных
 local function create_spaces()
-    -- Основной спейс пользователей (оставляем существующий)
     local users = box.schema.space.create('users', {
         if_not_exists = true,
     })
@@ -32,7 +30,6 @@ local function create_spaces()
         unique = true
     })
 
-    -- Спейс для информации о пользователе
     local user_info = box.schema.space.create('user_info', {
         if_not_exists = true,
     })
@@ -101,7 +98,6 @@ local function create_spaces()
         if_not_exists = true
     })
 
-    -- Спейс для языков
     local languages = box.schema.space.create('languages', {
         if_not_exists = true,
     })
@@ -123,18 +119,15 @@ local function create_spaces()
     })
 end
 
--- Создаем пользователя для внешних подключений
 local function create_user()
     box.schema.user.create('user_service', {
         password = 'gopassword',
         if_not_exists = true
     })
 
-    -- Даем права пользователю
     box.schema.user.grant('user_service', 'read,write,execute', 'universe', nil, { if_not_exists = true })
 end
 
--- Вспомогательная функция для генерации ID
 local function get_next_id(space_name)
     local space = box.space[space_name]
     local max_id = 0
@@ -146,7 +139,6 @@ local function get_next_id(space_name)
     return max_id + 1
 end
 
--- Функция для создания нового пользователя в спейсе
 function create_new_user(login, password)
     if type(login) ~= 'string' or type(password) ~= 'string' then
         return utils.raw_response({ error = "Login and password must be strings" })
@@ -171,7 +163,6 @@ function create_new_user(login, password)
     })
 end
 
--- Функция для создания или обновления информации о пользователе
 function create_user_info(info)
     if type(info) ~= 'string' then
         return utils.raw_response({
@@ -187,9 +178,7 @@ function create_user_info(info)
             error = "Invalid JSON format" })
     end
 
-    -- Генерируем новый ID пользователя если он не предоставлен
     local user_id = data.user_id or get_next_id('user_info')
-    -- Создаем основную информацию
     box.space.user_info:insert({
         user_id,
         data.name or box.NULL,
@@ -202,7 +191,6 @@ function create_user_info(info)
         (data.social_profiles and data.social_profiles.telegram) or box.NULL
     })
 
-    -- Добавляем образование
     if data.education then
         for _, edu in ipairs(data.education) do
             if not edu.institution or not edu.degree or not edu.from then
@@ -219,7 +207,6 @@ function create_user_info(info)
         end
     end
 
-    -- Добавляем опыт работы
     if data.experience then
         for _, exp in ipairs(data.experience) do
             if not exp.company or not exp.role or not exp.from then
@@ -239,7 +226,6 @@ function create_user_info(info)
         end
     end
 
-    -- Добавляем языки
     if data.languages then
         for _, lang in ipairs(data.languages) do
             box.space.languages:insert({
@@ -260,7 +246,6 @@ function create_user_info(info)
     })
 end
 
--- Функция для получения информации о пользователе
 function get_user_info(user_id)
     if type(user_id) ~= 'number' then
         return utils.raw_response({ error = "User ID must be a number" })
@@ -288,7 +273,6 @@ function get_user_info(user_id)
         languages = {}
     }
 
-    -- Получаем образование
     for _, edu in box.space.education.index.user_id:pairs(user_id) do
         table.insert(result.education, {
             education_id = edu[1],
@@ -299,7 +283,6 @@ function get_user_info(user_id)
         })
     end
 
-    -- Получаем опыт работы
     for _, exp in box.space.experience.index.user_id:pairs(user_id) do
         table.insert(result.experience, {
             experience_id = exp[1],
@@ -311,7 +294,6 @@ function get_user_info(user_id)
         })
     end
 
-    -- Получаем языки
     for _, lang in box.space.languages.index.user_id:pairs(user_id) do
         table.insert(result.languages, {
             language_id = lang[1],
@@ -324,8 +306,6 @@ function get_user_info(user_id)
     )
 end
 
-
--- Функция для получения пользователя по логину
 function get_user_by_login(login)
     if type(login) ~= 'string' then
         return utils.raw_response({ error = "Login must be a string" })
@@ -345,7 +325,6 @@ function get_user_by_login(login)
 
 end
 
--- New function to update user info based on provided JSON
 function update_user_info(info)
     if type(info) ~= 'string' then
         return utils.raw_response({
@@ -374,7 +353,6 @@ function update_user_info(info)
             resp = "User not found" })
     end
 
-    -- Update main user info
     local updates = {}
     if data.name then
         table.insert(updates, { '=', 2, data.name })
@@ -434,7 +412,6 @@ function update_user_info(info)
         end
     end
 
-    -- Update experience
     if data.experience then
         for _, exp in ipairs(data.experience) do
             local exp_id = exp.experience_id or get_next_id('experience')
@@ -466,7 +443,6 @@ function update_user_info(info)
         end
     end
 
-    -- Update languages
     if data.languages then
         for _, lang in ipairs(data.languages) do
             local lang_id = lang.language_id or get_next_id('languages')
@@ -543,12 +519,9 @@ function delete_user_info(info)
         status = 204,
     })
 end
--- Вызываем функции инициализации
 box.once('init', function()
     create_spaces()
     create_user()
 end)
 
--- В конце файла
 require('log').info("Initialization completed!")
-
